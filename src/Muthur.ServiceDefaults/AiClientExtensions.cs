@@ -1,0 +1,59 @@
+using Microsoft.Extensions.AI;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using OpenAI;
+
+namespace MuThUr.ServiceDefaults;
+
+public static class AiClientExtensions
+{
+    /// <summary>
+    /// Registers an <see cref="IChatClient"/> using the M.E.AI pipeline.
+    /// Reads "AI:Provider" and "AI:Model" from configuration. Defaults to OpenAI-compatible.
+    /// </summary>
+    public static IHostApplicationBuilder AddAgentChatClient(this IHostApplicationBuilder builder)
+    {
+        var provider = builder.Configuration["AI:Provider"] ?? "openai";
+        var model = builder.Configuration["AI:Model"] ?? "gpt-4.1";
+        var apiKey = builder.Configuration["AI:ApiKey"] ?? "";
+        var endpoint = builder.Configuration["AI:Endpoint"];
+
+        builder.Services.AddChatClient(services =>
+        {
+            IChatClient inner = provider.ToLowerInvariant() switch
+            {
+                "anthropic" => CreateAnthropicClient(model, apiKey),
+                _ => CreateOpenAiClient(model, apiKey, endpoint)
+            };
+
+            return new ChatClientBuilder(inner)
+                .UseOpenTelemetry(configure: t => t.EnableSensitiveData = true)
+                .UseLogging()
+                .Build();
+        });
+
+        return builder;
+    }
+
+    private static IChatClient CreateOpenAiClient(string model, string apiKey, string? endpoint)
+    {
+        var options = new OpenAIClientOptions();
+        if (endpoint is not null)
+            options.Endpoint = new Uri(endpoint);
+
+        var client = new OpenAIClient(new System.ClientModel.ApiKeyCredential(apiKey), options);
+        return client.GetChatClient(model).AsIChatClient();
+    }
+
+    private static IChatClient CreateAnthropicClient(string model, string apiKey)
+    {
+        // For Anthropic, use the OpenAI-compatible endpoint or the Anthropic SDK.
+        // Using OpenAI-compatible mode for simplicity in this demo.
+        var options = new OpenAIClientOptions
+        {
+            Endpoint = new Uri("https://api.anthropic.com/v1/")
+        };
+        var client = new OpenAIClient(new System.ClientModel.ApiKeyCredential(apiKey), options);
+        return client.GetChatClient(model).AsIChatClient();
+    }
+}

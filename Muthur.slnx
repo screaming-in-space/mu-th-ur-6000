@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="src/Muthur.Contracts/Muthur.Contracts.csproj" />
+  <Project Path="src/Muthur.ServiceDefaults/Muthur.ServiceDefaults.csproj" />
+  <Project Path="src/Muthur.Bishop.Worker/Muthur.Bishop.Worker.csproj" />
+  <Project Path="src/Muthur.Api/Muthur.Api.csproj" />
+  <Project Path="src/Muthur.AppHost/Muthur.AppHost.csproj" />
+</Solution>

@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>MuThUr.Worker</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="PdfPig" Version="0.1.15-alpha-20260328-e5c04" />
+    <PackageReference Include="Temporalio.Extensions.Hosting" Version="1.12.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\MuThUr.Contracts\MuThUr.Contracts.csproj" />
+    <ProjectReference Include="..\MuThUr.ServiceDefaults\MuThUr.ServiceDefaults.csproj" />
+  </ItemGroup>
+
+</Project>
