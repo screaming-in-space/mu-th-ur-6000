@@ -9,7 +9,7 @@ namespace Muthur.Bishop.Worker.Activities;
 /// </summary>
 public sealed class ToolRegistry
 {
-    private readonly Dictionary<string, Func<string, Task<string>>> _handlers = new();
+    private readonly Dictionary<string, Func<string, Task<string>>> _handlers = [];
     private readonly List<AITool> _tools = [];
 
     public ToolRegistry()

@@ -1,4 +1,14 @@
 <Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="Directory.Build.props" />
+    <File Path="global.json" />
+    <File Path="LICENSE" />
+    <File Path="nuget.config" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Muthur.Logging/Muthur.Logging.csproj" />
+  </Folder>
   <Project Path="src/Aspire.Hosting.Temporal/Aspire.Hosting.Temporal.csproj" />
   <Project Path="src/Muthur.Api/Muthur.Api.csproj" />
   <Project Path="src/Muthur.AppHost/Muthur.AppHost.csproj" />

@@ -1,4 +1,4 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <Sdk Name="Aspire.AppHost.Sdk" Version="13.2.0" />
 
@@ -6,6 +6,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>Muthur.AppHost</RootNamespace>
     <IsAspireHost>true</IsAspireHost>
+    <UserSecretsId>9013c25a-220a-4752-9dcb-62224c7a5723</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>

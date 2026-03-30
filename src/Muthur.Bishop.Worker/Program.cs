@@ -31,7 +31,7 @@ builder.Services
 // Falls back to Temporal:Address config or localhost for non-Aspire runs.
 builder.Services.AddTemporalClient(options =>
 {
-    options.TargetHost = builder.Configuration.GetConnectionString("temporal")
+    options.TargetHost = builder.Configuration.GetConnectionString("muthur-temporal-dev")
         ?? builder.Configuration["Temporal:Address"]
         ?? "localhost:7233";
     options.Namespace = builder.Configuration["Temporal:Namespace"] ?? "default";
