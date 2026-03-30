@@ -6,15 +6,32 @@
     <File Path="nuget.config" />
     <File Path="README.md" />
   </Folder>
-  <Folder Name="/src/">
+  <Folder Name="/Solution Items/.claude/">
+    <File Path=".claude/CLAUDE.md" />
+    <File Path=".claude/launch.json" />
+  </Folder>
+  <Folder Name="/Solution Items/.github/">
+    <File Path=".github/copilot-instructions.md" />
+  </Folder>
+  <Folder Name="/Solution Items/docs/">
+    <File Path="docs/RULES.md" />
+    <File Path="docs/STRUCTURE.md" />
+  </Folder>
+  <Folder Name="/Solution Items/samples/" />
+  <Folder Name="/src/" />
+  <Folder Name="/src/Aspire/">
+    <Project Path="src/Aspire.Hosting.Temporal/Aspire.Hosting.Temporal.csproj" />
+    <Project Path="src/Muthur.AppHost/Muthur.AppHost.csproj" />
+  </Folder>
+  <Folder Name="/src/Core/">
+    <Project Path="src/Muthur.Contracts/Muthur.Contracts.csproj" />
     <Project Path="src/Muthur.Data/Muthur.Data.csproj" />
     <Project Path="src/Muthur.Logging/Muthur.Logging.csproj" />
+    <Project Path="src/Muthur.ServiceDefaults/Muthur.ServiceDefaults.csproj" />
     <Project Path="src/Muthur.Tools/Muthur.Tools.csproj" />
   </Folder>
-  <Project Path="src/Aspire.Hosting.Temporal/Aspire.Hosting.Temporal.csproj" />
-  <Project Path="src/Muthur.Api/Muthur.Api.csproj" />
-  <Project Path="src/Muthur.AppHost/Muthur.AppHost.csproj" />
-  <Project Path="src/Muthur.Bishop.Worker/Muthur.Bishop.Worker.csproj" />
-  <Project Path="src/Muthur.Contracts/Muthur.Contracts.csproj" />
-  <Project Path="src/Muthur.ServiceDefaults/Muthur.ServiceDefaults.csproj" />
+  <Folder Name="/src/Host/">
+    <Project Path="src/Muthur.Api/Muthur.Api.csproj" />
+    <Project Path="src/Muthur.Bishop.Worker/Muthur.Bishop.Worker.csproj" />
+  </Folder>
 </Solution>

@@ -37,7 +37,14 @@ Technical constraints and rejected patterns for mu-th-ur-6000.
 - Don't use `with` expressions inside `Workflow.CreateContinueAsNewException` lambdas — they're expression trees. Create local variables first.
 - Don't block the agent conversation on child workflow completion. Fire-and-forget with `Abandon`.
 
-## M.E.AI / IChatClient
+## M.E.AI / IChatClient / VectorData
+
+### Priority order for AI abstractions
+
+1. **Microsoft.Extensions.AI** (`IChatClient`, `IEmbeddingGenerator`, `AIFunctionFactory`) — first-party dotnet/extensions abstractions. Use these for all new LLM and embedding work.
+2. **Microsoft.Extensions.VectorData** (`VectorStore`, `VectorStoreCollection<TKey, TRecord>`) — first-party vector store abstractions. Stable at 10.1.0. Provider packages are named `Microsoft.SemanticKernel.Connectors.*` but they implement M.E.AI interfaces and have no dependency on SK orchestration. Use these when you want annotated model-based vector stores instead of raw SQL.
+3. **Microsoft Agent Framework** — multi-agent graph orchestration built on M.E.AI. Use for multi-agent coordination when the project needs it.
+4. **Semantic Kernel** — still actively maintained, not deprecated. SK plugins are now `AIFunction` instances under the hood. For greenfield code, prefer M.E.AI abstractions directly — they're the foundation SK builds on. For existing SK codebases, there's no urgency to rewrite.
 
 ### Do
 
@@ -46,10 +53,10 @@ Technical constraints and rejected patterns for mu-th-ur-6000.
 - Use `AIFunctionFactory.Create()` with `[Description]` attributes for tool registration.
 - Read provider, model, API key, and endpoint from configuration (`AI:Provider`, `AI:Model`, `AI:ApiKey`, `AI:Endpoint`, `AI:EmbeddingModel`).
 - Keep the pipeline registration in one place (`AiClientExtensions.cs` in ServiceDefaults).
+- Consider `Microsoft.Extensions.VectorData` + `Microsoft.SemanticKernel.Connectors.PgVector` as an alternative to raw Dapper for vector store operations. The connector handles table creation, HNSW indexing, and search with annotated C# models. This repo uses Dapper for explicitness; the VectorData abstraction is a valid production path.
 
 ### Don't
 
-- Don't use Semantic Kernel for new code. SK is in maintenance mode; M.E.AI + Agent Framework is the path forward.
 - Don't add `FunctionInvokingChatClient` to the pipeline — the agentic loop in the workflow handles tool dispatch explicitly.
 - Don't hardcode provider-specific API URLs. Use the provider switch pattern.
 
