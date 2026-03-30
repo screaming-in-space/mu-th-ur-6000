@@ -35,6 +35,29 @@ public static class AiClientExtensions
         return builder;
     }
 
+    /// <summary>
+    /// Registers an <see cref="IEmbeddingGenerator{String, Embedding}"/> for vector embedding generation.
+    /// Uses OpenAI's text-embedding-3-small (1536 dimensions) by default.
+    /// </summary>
+    public static IHostApplicationBuilder AddAgentEmbeddingGenerator(this IHostApplicationBuilder builder)
+    {
+        var apiKey = builder.Configuration["AI:ApiKey"] ?? "";
+        var endpoint = builder.Configuration["AI:Endpoint"];
+        var embeddingModel = builder.Configuration["AI:EmbeddingModel"] ?? "text-embedding-3-small";
+
+        builder.Services.AddEmbeddingGenerator(services =>
+        {
+            var options = new OpenAIClientOptions();
+            if (endpoint is not null)
+                options.Endpoint = new Uri(endpoint);
+
+            var client = new OpenAIClient(new System.ClientModel.ApiKeyCredential(apiKey), options);
+            return client.GetEmbeddingClient(embeddingModel).AsIEmbeddingGenerator();
+        });
+
+        return builder;
+    }
+
     private static IChatClient CreateOpenAiClient(string model, string apiKey, string? endpoint)
     {
         var options = new OpenAIClientOptions();

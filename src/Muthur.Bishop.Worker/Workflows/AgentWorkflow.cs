@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Muthur.Bishop.Worker.Activities;
 using Muthur.Contracts;
 using Temporalio.Workflows;
@@ -94,6 +95,13 @@ public class AgentWorkflow
                     AgentConstants.RoleTool,
                     toolResult,
                     ToolCallId: toolCall.Id));
+
+                // Kick off document ingestion as a child workflow when a document is stored.
+                // Runs independently — doesn't block the conversation or die with ContinueAsNew.
+                if (toolCall.Name == "store_document")
+                {
+                    await TryStartIngestionAsync(toolCall.Arguments, toolResult);
+                }
             }
 
             // Loop: send tool results back to the LLM for the next turn.
@@ -108,4 +116,43 @@ public class AgentWorkflow
 
     [WorkflowQuery]
     public AgentState GetState() => new(_isProcessing, _turnCount, _lastResponse);
+
+    /// <summary>
+    /// Starts DocumentIngestionWorkflow as a fire-and-forget child workflow.
+    /// ParentClosePolicy.Abandon ensures ingestion survives ContinueAsNew.
+    /// </summary>
+    private static async Task TryStartIngestionAsync(string toolArguments, string toolResult)
+    {
+        try
+        {
+            var args = JsonSerializer.Deserialize<StoreDocumentArgs>(toolArguments);
+            var result = JsonSerializer.Deserialize<StoreDocumentResult>(toolResult);
+            if (args is null || result?.DocumentId is null) return;
+
+            var input = new DocumentIngestionInput(
+                result.DocumentId.Value,
+                args.SourcePath ?? "",
+                args.Text ?? "",
+                args.PageCount,
+                args.Metadata ?? []);
+
+            await Workflow.ExecuteChildWorkflowAsync(
+                (DocumentIngestionWorkflow wf) => wf.RunAsync(input),
+                new ChildWorkflowOptions
+                {
+                    Id = $"ingest-{result.DocumentId}",
+                    ParentClosePolicy = Temporalio.Workflows.ParentClosePolicy.Abandon
+                });
+        }
+        catch
+        {
+            // Ingestion failure doesn't break the agent conversation.
+        }
+    }
+
+    private sealed record StoreDocumentArgs(
+        string? Title, string? SourcePath, string? Text,
+        int PageCount = 0, Dictionary<string, string>? Metadata = null);
+
+    private sealed record StoreDocumentResult(Guid? DocumentId);
 }

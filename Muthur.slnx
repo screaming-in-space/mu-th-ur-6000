@@ -7,7 +7,9 @@
     <File Path="README.md" />
   </Folder>
   <Folder Name="/src/">
+    <Project Path="src/Muthur.Data/Muthur.Data.csproj" />
     <Project Path="src/Muthur.Logging/Muthur.Logging.csproj" />
+    <Project Path="src/Muthur.Tools/Muthur.Tools.csproj" />
   </Folder>
   <Project Path="src/Aspire.Hosting.Temporal/Aspire.Hosting.Temporal.csproj" />
   <Project Path="src/Muthur.Api/Muthur.Api.csproj" />
