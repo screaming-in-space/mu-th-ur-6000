@@ -20,18 +20,18 @@
   <Folder Name="/Solution Items/samples/" />
   <Folder Name="/src/" />
   <Folder Name="/src/Aspire/">
-    <Project Path="src/Aspire.Hosting.Temporal/Aspire.Hosting.Temporal.csproj" />
-    <Project Path="src/Muthur.AppHost/Muthur.AppHost.csproj" />
+    <Project Path="src/Aspire/Aspire.Hosting.Temporal/Aspire.Hosting.Temporal.csproj" />
+    <Project Path="src/Aspire/Muthur.AppHost/Muthur.AppHost.csproj" />
   </Folder>
   <Folder Name="/src/Core/">
-    <Project Path="src/Muthur.Contracts/Muthur.Contracts.csproj" />
-    <Project Path="src/Muthur.Data/Muthur.Data.csproj" />
-    <Project Path="src/Muthur.Logging/Muthur.Logging.csproj" />
-    <Project Path="src/Muthur.ServiceDefaults/Muthur.ServiceDefaults.csproj" />
-    <Project Path="src/Muthur.Tools/Muthur.Tools.csproj" />
+    <Project Path="src/Core/Muthur.Contracts/Muthur.Contracts.csproj" />
+    <Project Path="src/Core/Muthur.Data/Muthur.Data.csproj" />
+    <Project Path="src/Core/Muthur.Logging/Muthur.Logging.csproj" />
+    <Project Path="src/Core/Muthur.ServiceDefaults/Muthur.ServiceDefaults.csproj" />
+    <Project Path="src/Core/Muthur.Tools/Muthur.Tools.csproj" />
   </Folder>
-  <Folder Name="/src/Host/">
-    <Project Path="src/Muthur.Api/Muthur.Api.csproj" />
-    <Project Path="src/Muthur.Bishop.Worker/Muthur.Bishop.Worker.csproj" />
+  <Folder Name="/src/Hosts/">
+    <Project Path="src/Hosts/Muthur.Api/Muthur.Api.csproj" />
+    <Project Path="src/Hosts/Muthur.Bishop.Worker/Muthur.Bishop.Worker.csproj" />
   </Folder>
 </Solution>

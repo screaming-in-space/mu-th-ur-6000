@@ -9,9 +9,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Muthur.Contracts\Muthur.Contracts.csproj" />
-    <ProjectReference Include="..\Muthur.Data\Muthur.Data.csproj" />
-    <ProjectReference Include="..\Muthur.ServiceDefaults\Muthur.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\Core\Muthur.Contracts\Muthur.Contracts.csproj" />
+    <ProjectReference Include="..\..\Core\Muthur.Data\Muthur.Data.csproj" />
+    <ProjectReference Include="..\..\Core\Muthur.ServiceDefaults\Muthur.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

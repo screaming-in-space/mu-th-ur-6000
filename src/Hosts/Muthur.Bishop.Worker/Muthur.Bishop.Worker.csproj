@@ -1,0 +1,19 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <RootNamespace>Muthur.Bishop.Worker</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Temporalio.Extensions.Hosting" Version="1.12.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Core\Muthur.Contracts\Muthur.Contracts.csproj" />
+    <ProjectReference Include="..\..\Core\Muthur.Data\Muthur.Data.csproj" />
+    <ProjectReference Include="..\..\Core\Muthur.ServiceDefaults\Muthur.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\Core\Muthur.Tools\Muthur.Tools.csproj" />
+  </ItemGroup>
+
+</Project>
