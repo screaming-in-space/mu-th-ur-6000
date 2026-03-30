@@ -7,7 +7,7 @@ namespace Muthur.Bishop.Worker.Workflows;
 /// <summary>
 /// Child workflow that chunks document text, generates embeddings,
 /// and stores them in Postgres with pgvector. Each step is a Temporal
-/// activity checkpoint — if embedding fails, chunking doesn't re-run.
+/// activity checkpoint - if embedding fails, chunking doesn't re-run.
 /// </summary>
 [Workflow]
 public class DocumentIngestionWorkflow

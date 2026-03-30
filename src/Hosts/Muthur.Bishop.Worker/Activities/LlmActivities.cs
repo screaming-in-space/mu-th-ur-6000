@@ -6,7 +6,7 @@ using Temporalio.Activities;
 namespace Muthur.Bishop.Worker.Activities;
 
 /// <summary>
-/// Calls the LLM via M.E.AI's IChatClient. Each call is a Temporal activity —
+/// Calls the LLM via M.E.AI's IChatClient. Each call is a Temporal activity -
 /// if it fails, Temporal retries it without re-executing prior activities.
 /// </summary>
 public class LlmActivities(IChatClient chatClient, ToolRegistry toolRegistry)

@@ -24,7 +24,7 @@ public sealed record DocumentChunkRecord(
     int ChunkIndex,
     string ChunkText);
 
-/// <summary>Vector search result — a chunk ranked by similarity.</summary>
+/// <summary>Vector search result - a chunk ranked by similarity.</summary>
 public sealed record SimilarChunk(
     string ChunkText,
     Guid DocumentId,

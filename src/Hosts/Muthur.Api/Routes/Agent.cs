@@ -17,7 +17,7 @@ public static class AgentRoutes
             var agentId = Guid.NewGuid().ToString("N")[..8];
             var workflowId = AgentConstants.WorkflowId(agentId);
 
-            // Start the workflow using untyped handle — avoids referencing Worker project.
+            // Start the workflow using untyped handle - avoids referencing Worker project.
             await temporal.StartWorkflowAsync(
                 "AgentWorkflow",
                 [new AgentWorkflowInput(agentId, request.SystemPrompt)],

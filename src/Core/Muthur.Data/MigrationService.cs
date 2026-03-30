@@ -5,7 +5,7 @@ using Npgsql;
 namespace Muthur.Data;
 
 /// <summary>
-/// Runs schema migrations on startup — creates the documents and chunks tables
+/// Runs schema migrations on startup - creates the documents and chunks tables
 /// with pgvector extension. Idempotent via IF NOT EXISTS.
 /// </summary>
 public sealed class MigrationService(

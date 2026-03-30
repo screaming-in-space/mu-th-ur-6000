@@ -9,21 +9,21 @@ Temporal worker hosting the agentic loop workflow, document ingestion child work
 Signal-driven agentic loop:
 
 1. Waits for `PromptSignal` via `WaitConditionAsync`
-2. Calls `LlmActivities.CallLlmAsync` — sends conversation history to the LLM
+2. Calls `LlmActivities.CallLlmAsync` - sends conversation history to the LLM
 3. If the LLM returns tool calls: dispatches each as a `ToolActivities.ExecuteToolAsync` activity
 4. Appends tool results to conversation history, loops back to step 2
 5. When no tool calls remain: returns the final response
 6. After 50 turns: `ContinueAsNew` with a fresh event history
 
-When the `store_document` tool completes, the workflow fires `DocumentIngestionWorkflow` as a child workflow with `ParentClosePolicy.Abandon` — ingestion runs independently and survives `ContinueAsNew`.
+When the `store_document` tool completes, the workflow fires `DocumentIngestionWorkflow` as a child workflow with `ParentClosePolicy.Abandon` - ingestion runs independently and survives `ContinueAsNew`.
 
 ### DocumentIngestionWorkflow
 
 Child workflow for document ingestion:
 
-1. `ChunkTextAsync` — split text into ~500-token chunks with 50-token overlap
-2. `GenerateEmbeddingsAsync` — batch call to `IEmbeddingGenerator` (OpenAI `text-embedding-3-small`)
-3. `StoreChunksAsync` — bulk INSERT chunks + embeddings to Postgres with pgvector
+1. `ChunkTextAsync` - split text into ~500-token chunks with 50-token overlap
+2. `GenerateEmbeddingsAsync` - batch call to `IEmbeddingGenerator` (OpenAI `text-embedding-3-small`)
+3. `StoreChunksAsync` - bulk INSERT chunks + embeddings to Postgres with pgvector
 
 Each step is individually checkpointed. If embedding fails, chunking doesn't re-run.
 
@@ -31,7 +31,7 @@ Each step is individually checkpointed. If embedding fails, chunking doesn't re-
 
 | File | Purpose |
 |------|---------|
-| `Program.cs` | Generic host setup — DI for tools, data, embeddings, Temporal registration |
+| `Program.cs` | Generic host setup - DI for tools, data, embeddings, Temporal registration |
 | `Workflows/AgentWorkflow.cs` | Signal-driven agentic loop + child workflow trigger |
 | `Workflows/DocumentIngestionWorkflow.cs` | Chunk → embed → store pipeline |
 | `Activities/LlmActivities.cs` | `IChatClient.GetResponseAsync` + tool call extraction |

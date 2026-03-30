@@ -12,13 +12,13 @@ mu-th-ur-6000/
 ├── src/
 │   ├── Aspire.Hosting.Temporal/    # Aspire extension for Temporal container
 │   ├── Muthur.AppHost/             # Aspire orchestration host
-│   ├── Muthur.Api/                 # Minimal API — HTTP endpoints
-│   ├── Muthur.Bishop.Worker/       # Temporal worker — workflows + activities
-│   ├── Muthur.Contracts/           # Shared types — no dependencies
-│   ├── Muthur.Data/                # Postgres + Redis — document storage + vector search
+│   ├── Muthur.Api/                 # Minimal API - HTTP endpoints
+│   ├── Muthur.Bishop.Worker/       # Temporal worker - workflows + activities
+│   ├── Muthur.Contracts/           # Shared types - no dependencies
+│   ├── Muthur.Data/                # Postgres + Redis - document storage + vector search
 │   ├── Muthur.Logging/             # Serilog structured logging
 │   ├── Muthur.ServiceDefaults/     # Shared DI, M.E.AI pipeline
-│   └── Muthur.Tools/              # Agent tools — PDF extraction, document storage
+│   └── Muthur.Tools/              # Agent tools - PDF extraction, document storage
 ├── samples/                        # Sample PDFs for testing
 ├── .claude/
 │   └── launch.json                 # Preview tool config
@@ -43,13 +43,13 @@ Aspire orchestration. Starts Temporal, Postgres, and Redis containers, then the 
 
 ### Aspire.Hosting.Temporal
 
-Aspire extension — adds Temporal dev server as a container resource with health checks. Auto-launches Docker Desktop if not running.
+Aspire extension - adds Temporal dev server as a container resource with health checks. Auto-launches Docker Desktop if not running.
 
 | File | Purpose |
 |------|---------|
 | `TemporalResource.cs` | `ContainerResource` + `IResourceWithConnectionString` |
-| `TemporalResourceBuilderExtensions.cs` | `AddTemporalDevServer()` — image, ports, health check |
-| `DockerDesktopExtensions.cs` | `EnsureDockerAsync()` — cross-platform Docker Desktop launcher |
+| `TemporalResourceBuilderExtensions.cs` | `AddTemporalDevServer()` - image, ports, health check |
+| `DockerDesktopExtensions.cs` | `EnsureDockerAsync()` - cross-platform Docker Desktop launcher |
 
 **Depends on:** `Aspire.Hosting` 13.2.0
 
@@ -101,10 +101,10 @@ Persistence layer. Owns Postgres + Redis, document storage, vector search.
 
 | File | Purpose |
 |------|---------|
-| `DataExtensions.cs` | `AddMuthurData()` — NpgsqlDataSource with pgvector, Redis cache, repos, migration |
-| `MigrationService.cs` | IHostedService — idempotent CREATE TABLE + pgvector extension on startup |
-| `IDocumentRepository.cs` | Interface — store, get, list, vector search |
-| `DocumentRepository.cs` | Dapper + NpgsqlDataSource — CRUD + pgvector cosine similarity |
+| `DataExtensions.cs` | `AddMuthurData()` - NpgsqlDataSource with pgvector, Redis cache, repos, migration |
+| `MigrationService.cs` | IHostedService - idempotent CREATE TABLE + pgvector extension on startup |
+| `IDocumentRepository.cs` | Interface - store, get, list, vector search |
+| `DocumentRepository.cs` | Dapper + NpgsqlDataSource - CRUD + pgvector cosine similarity |
 | `CachedDocumentRepository.cs` | IDistributedCache decorator over DocumentRepository with TTL |
 
 **Depends on:** Muthur.Contracts, Aspire.Npgsql, Aspire.StackExchange.Redis.DistributedCaching, Dapper, Pgvector
@@ -116,7 +116,7 @@ Agent tools. Isolated from the Worker for independent testability.
 | File | Purpose |
 |------|---------|
 | `ToolRegistry.cs` | `AIFunctionFactory.Create()` registration + name→handler dispatch |
-| `Handlers/PdfHandler.cs` | PdfPig text extraction — static, no DI |
+| `Handlers/PdfHandler.cs` | PdfPig text extraction - static, no DI |
 | `Handlers/DocumentStoreHandler.cs` | Store document text in Postgres via `IDocumentRepository` |
 
 **Depends on:** Muthur.Contracts, Muthur.Data, Microsoft.Extensions.AI, PdfPig
@@ -127,7 +127,7 @@ Shared DI extensions. Owns the M.E.AI pipeline and Aspire service defaults.
 
 | File | Purpose |
 |------|---------|
-| `Extensions.cs` | `AddServiceDefaults()` — Serilog, OpenTelemetry, health checks, service discovery |
+| `Extensions.cs` | `AddServiceDefaults()` - Serilog, OpenTelemetry, health checks, service discovery |
 | `AiClientExtensions.cs` | `AddAgentChatClient()` + `AddAgentEmbeddingGenerator()` |
 
 **Depends on:** Muthur.Logging, Microsoft.Extensions.AI, Microsoft.Extensions.AI.OpenAI
@@ -138,7 +138,7 @@ Serilog structured logging with optional JSON output and OTLP export.
 
 | File | Purpose |
 |------|---------|
-| `LoggingExtensions.cs` | `AddStructuredLogging()` — console + OTLP, microsecond timestamps, JSON mode |
+| `LoggingExtensions.cs` | `AddStructuredLogging()` - console + OTLP, microsecond timestamps, JSON mode |
 
 **Depends on:** Serilog.Extensions.Hosting, Serilog.Sinks.Console, Serilog.Formatting.Compact, Serilog.Sinks.OpenTelemetry
 
@@ -166,7 +166,7 @@ AppHost
 
 Api and Worker share Contracts, Data, and ServiceDefaults but never reference each other.
 The Api talks to workflows via untyped Temporal handles (string-based names).
-Tools is isolated from the Worker — the Worker owns Temporal activities, Tools owns handlers.
+Tools is isolated from the Worker - the Worker owns Temporal activities, Tools owns handlers.
 
 ## Data Flow
 

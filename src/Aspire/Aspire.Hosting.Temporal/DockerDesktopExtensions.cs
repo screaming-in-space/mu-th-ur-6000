@@ -16,7 +16,7 @@ public static class DockerDesktopExtensions
     {
         if (await IsDockerRunningAsync()) { return builder; }
 
-        Console.WriteLine("Docker is not running — attempting to start Docker Desktop...");
+        Console.WriteLine("Docker is not running - attempting to start Docker Desktop...");
         LaunchDockerDesktop();
 
         var limit = timeout ?? TimeSpan.FromSeconds(60);

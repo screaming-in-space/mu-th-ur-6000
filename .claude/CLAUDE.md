@@ -23,4 +23,4 @@ Requires Docker Desktop (auto-launched if not running). Aspire starts Temporal, 
 - Windows, CRLF line endings
 - .NET 10 / C# 14.0
 - Docker Desktop for container resources (Temporal, Postgres, Redis)
-- `nuget.config` clears global sources — only `api.nuget.org`
+- `nuget.config` clears global sources - only `api.nuget.org`

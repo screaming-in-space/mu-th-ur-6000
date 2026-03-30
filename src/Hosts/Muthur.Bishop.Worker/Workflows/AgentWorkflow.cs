@@ -8,7 +8,7 @@ namespace Muthur.Bishop.Worker.Workflows;
 /// <summary>
 /// Durable agentic loop. Receives user prompts via signal, runs the LLM,
 /// dispatches tool calls, and loops until the LLM produces a final response.
-/// Stateless — conversation history lives in the signal, not in workflow state.
+/// Stateless - conversation history lives in the signal, not in workflow state.
 /// </summary>
 [Workflow]
 public class AgentWorkflow
@@ -53,7 +53,7 @@ public class AgentWorkflow
             new(AgentConstants.RoleUser, signal.Content)
         };
 
-        // The agentic loop — keep calling the LLM until it stops requesting tools.
+        // The agentic loop - keep calling the LLM until it stops requesting tools.
         while (true)
         {
             var llmInput = new LlmActivityInput(messages, systemPrompt);
@@ -62,7 +62,7 @@ public class AgentWorkflow
                 (LlmActivities act) => act.CallLlmAsync(llmInput),
                 new ActivityOptions { StartToCloseTimeout = TimeSpan.FromMinutes(2) });
 
-            // No tool calls — the LLM produced a final response.
+            // No tool calls - the LLM produced a final response.
             if (llmOutput.ToolCalls.Length == 0)
             {
                 return llmOutput.Content ?? "(no response)";
@@ -97,7 +97,7 @@ public class AgentWorkflow
                     ToolCallId: toolCall.Id));
 
                 // Kick off document ingestion as a child workflow when a document is stored.
-                // Runs independently — doesn't block the conversation or die with ContinueAsNew.
+                // Runs independently - doesn't block the conversation or die with ContinueAsNew.
                 if (toolCall.Name == "store_document")
                 {
                     await TryStartIngestionAsync(toolCall.Arguments, toolResult);

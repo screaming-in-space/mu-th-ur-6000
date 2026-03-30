@@ -118,7 +118,7 @@ public sealed class DocumentRepository(NpgsqlDataSource dataSource) : IDocumentR
             r.Chunk_Text, r.Document_Id, r.Document_Title, r.Score)).ToList();
     }
 
-    // Dapper row types — snake_case matches Postgres column names.
+    // Dapper row types - snake_case matches Postgres column names.
     private sealed record DocumentRow(Guid Id, string? Title, string Source_Path,
         int Page_Count, string Metadata, DateTimeOffset Created_At);
 

@@ -20,11 +20,11 @@ builder.AddMuthurData("muthur-db", "muthur-cache");
 builder.AddAgentChatClient();
 builder.AddAgentEmbeddingGenerator();
 
-// Tools — isolated project, independently testable.
+// Tools - isolated project, independently testable.
 builder.Services.AddSingleton<DocumentStoreHandler>();
 builder.Services.AddSingleton<ToolRegistry>();
 
-// Temporal worker — agent workflow + ingestion child workflow + all activities.
+// Temporal worker - agent workflow + ingestion child workflow + all activities.
 builder.Services
     .AddHostedTemporalWorker(AgentConstants.TaskQueue)
     .AddWorkflow<AgentWorkflow>()

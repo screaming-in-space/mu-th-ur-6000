@@ -16,7 +16,7 @@ cd mu-th-ur-6000
 # Add your API key (OpenAI, Anthropic, or any OpenAI-compatible endpoint)
 dotnet user-secrets --project src/Muthur.Bishop.Worker set "AI:ApiKey" "sk-..."
 
-# Run — starts Docker, Temporal, Postgres, Redis, Worker, and API via Aspire
+# Run - starts Docker, Temporal, Postgres, Redis, Worker, and API via Aspire
 dotnet run --project src/Muthur.AppHost
 ```
 
@@ -54,30 +54,30 @@ curl "http://localhost:<api-port>/v1/documents/search?q=neural+network+latency&l
 curl http://localhost:<api-port>/v1/documents
 ```
 
-The API port is assigned by Aspire — check the dashboard at `http://localhost:15137`.
+The API port is assigned by Aspire - check the dashboard at `http://localhost:15137`.
 
 ## Architecture
 
 ```
-Muthur.AppHost             Aspire orchestration — Temporal + Postgres + Redis containers
+Muthur.AppHost             Aspire orchestration - Temporal + Postgres + Redis containers
 Aspire.Hosting.Temporal    Temporal dev server as Aspire resource + Docker launcher
-Muthur.Api                 Minimal API — agent + document endpoints
-Muthur.Bishop.Worker       Temporal worker — AgentWorkflow + DocumentIngestionWorkflow
-Muthur.Tools               Agent tools — PDF extraction + document storage (isolated)
-Muthur.Data                Postgres + Redis — repository, vector search, caching, migrations
-Muthur.Contracts           Shared records — no dependencies
+Muthur.Api                 Minimal API - agent + document endpoints
+Muthur.Bishop.Worker       Temporal worker - AgentWorkflow + DocumentIngestionWorkflow
+Muthur.Tools               Agent tools - PDF extraction + document storage (isolated)
+Muthur.Data                Postgres + Redis - repository, vector search, caching, migrations
+Muthur.Contracts           Shared records - no dependencies
 Muthur.ServiceDefaults     M.E.AI pipeline + Aspire defaults + Serilog
-Muthur.Logging             Structured logging — console + OTLP, microsecond timestamps
+Muthur.Logging             Structured logging - console + OTLP, microsecond timestamps
 ```
 
 ## Temporal patterns demonstrated
 
 | Pattern | Where |
 |---------|-------|
-| **Signals** | `AgentWorkflow.SendPromptAsync` — async prompt delivery |
-| **Queries** | `AgentWorkflow.GetState` — read-only state access |
-| **ContinueAsNew** | After 50 turns — fresh event history, agent keeps running |
-| **Child workflows** | `DocumentIngestionWorkflow` — chunk → embed → store, fire-and-forget |
+| **Signals** | `AgentWorkflow.SendPromptAsync` - async prompt delivery |
+| **Queries** | `AgentWorkflow.GetState` - read-only state access |
+| **ContinueAsNew** | After 50 turns - fresh event history, agent keeps running |
+| **Child workflows** | `DocumentIngestionWorkflow` - chunk → embed → store, fire-and-forget |
 
 ## Configuration
 
@@ -88,14 +88,14 @@ Set via user secrets or environment variables on the Worker:
 | `AI:Provider` | `openai` | `openai`, `anthropic`, or any OpenAI-compatible |
 | `AI:Model` | `gpt-4.1` | Chat model name |
 | `AI:EmbeddingModel` | `text-embedding-3-small` | Embedding model (1536 dimensions) |
-| `AI:ApiKey` | — | API key (required) |
-| `AI:Endpoint` | — | Custom endpoint URL (optional) |
-| `Logging:Format` | — | Set to `json` for structured JSON output |
+| `AI:ApiKey` | - | API key (required) |
+| `AI:Endpoint` | - | Custom endpoint URL (optional) |
+| `Logging:Format` | - | Set to `json` for structured JSON output |
 
 ## Adding a tool
 
 1. Create a handler class in `Muthur.Tools/Handlers/`
-2. Register it in `ToolRegistry` — `AIFunctionFactory.Create()` for LLM schema + `_handlers` for dispatch
+2. Register it in `ToolRegistry` - `AIFunctionFactory.Create()` for LLM schema + `_handlers` for dispatch
 3. If it needs DI, add constructor injection and register in Worker's `Program.cs`
 4. Done. No changes to `AgentWorkflow` or `ToolActivities`.
 

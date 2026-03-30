@@ -28,7 +28,7 @@ The Worker's `ToolActivities` and `AgentWorkflow` don't change.
 
 ## Dependencies
 
-- `Muthur.Contracts` — shared types
-- `Muthur.Data` — `IDocumentRepository` for document storage
-- `Microsoft.Extensions.AI` — `AIFunctionFactory`, `AITool`
-- `PdfPig` — PDF text extraction
+- `Muthur.Contracts` - shared types
+- `Muthur.Data` - `IDocumentRepository` for document storage
+- `Microsoft.Extensions.AI` - `AIFunctionFactory`, `AITool`
+- `PdfPig` - PDF text extraction

@@ -4,11 +4,11 @@ Aspire orchestration host. The single entry point for local dev.
 
 ## What it does
 
-1. Calls `EnsureDockerAsync()` — checks if Docker is running, launches Docker Desktop if not, polls until ready
+1. Calls `EnsureDockerAsync()` - checks if Docker is running, launches Docker Desktop if not, polls until ready
 2. Adds three container resources:
-   - **Temporal** (`temporalio/admin-tools`) — durable execution engine
-   - **Postgres** (`pgvector/pgvector:pg17`) — document storage with vector search
-   - **Redis** — distributed cache
+   - **Temporal** (`temporalio/admin-tools`) - durable execution engine
+   - **Postgres** (`pgvector/pgvector:pg17`) - document storage with vector search
+   - **Redis** - distributed cache
 3. Adds the API and Worker projects, wiring both to `.WithReference().WaitFor()` all infrastructure
 4. Starts everything via `builder.Build().RunAsync()`
 
@@ -33,7 +33,7 @@ Opens the Aspire dashboard at `http://localhost:15137`.
 - `Aspire.Hosting.AppHost` 13.2.0 (declared as SDK, not PackageReference)
 - `Aspire.Hosting.PostgreSQL` 13.2.0
 - `Aspire.Hosting.Redis` 13.2.0
-- `Aspire.Hosting.Temporal` (local project — `IsAspireProjectResource="false"`)
+- `Aspire.Hosting.Temporal` (local project - `IsAspireProjectResource="false"`)
 - Project references to `Muthur.Api` and `Muthur.Bishop.Worker`
 
 ## Environment

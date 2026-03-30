@@ -29,7 +29,7 @@ public sealed class ToolRegistry
             },
             "extract_pdf_text"));
 
-        // Document storage — persists extracted text to Postgres.
+        // Document storage - persists extracted text to Postgres.
         _handlers["store_document"] = documentStoreHandler.StoreAsync;
         _tools.Add(AIFunctionFactory.Create(
             [Description("Store extracted document text and metadata in the knowledge base. " +
