@@ -1,8 +1,7 @@
-using System.ComponentModel;
 using Microsoft.Extensions.AI;
-using MuThUr.Contracts;
+using System.ComponentModel;
 
-namespace MuThUr.Worker.Activities;
+namespace Muthur.Bishop.Worker.Activities;
 
 /// <summary>
 /// Central registry for agent tools. Maps tool names to handlers and provides
@@ -20,7 +19,7 @@ public sealed class ToolRegistry
 
         _tools.Add(AIFunctionFactory.Create(
             [Description("Extract text content and metadata from a PDF file. Returns the full text, page count, and document metadata.")]
-            async (
+        async (
                 [Description("Absolute path to the PDF file")] string filePath
             ) =>
             {

@@ -8,7 +8,7 @@ using OpenTelemetry;
 using OpenTelemetry.Metrics;
 using OpenTelemetry.Trace;
 
-namespace MuThUr.ServiceDefaults;
+namespace Muthur.ServiceDefaults;
 
 public static class Extensions
 {

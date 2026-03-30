@@ -1,9 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
-using MuThUr.Contracts;
-using MuThUr.ServiceDefaults;
-using MuThUr.Worker.Activities;
-using MuThUr.Worker.Workflows;
+using Muthur.Contracts;
+using Muthur.ServiceDefaults;
+using Muthur.Bishop.Worker.Activities;
+using Muthur.Bishop.Worker.Workflows;
 using Temporalio.Extensions.Hosting;
 
 var builder = Host.CreateApplicationBuilder(args);

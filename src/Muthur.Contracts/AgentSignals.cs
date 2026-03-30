@@ -1,4 +1,4 @@
-namespace MuThUr.Contracts;
+namespace Muthur.Contracts;
 
 /// <summary>Signal sent to the agent workflow to process a user prompt.</summary>
 public sealed record PromptSignal(

@@ -1,5 +1,5 @@
-using MuThUr.Api.Routes;
-using MuThUr.ServiceDefaults;
+using Muthur.Api.Routes;
+using Muthur.ServiceDefaults;
 using Temporalio.Client;
 
 var builder = WebApplication.CreateBuilder(args);

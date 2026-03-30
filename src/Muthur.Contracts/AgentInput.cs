@@ -1,4 +1,4 @@
-namespace MuThUr.Contracts;
+namespace Muthur.Contracts;
 
 /// <summary>Input to start the agent workflow.</summary>
 public sealed record AgentWorkflowInput(

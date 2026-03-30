@@ -1,4 +1,4 @@
-namespace MuThUr.Contracts;
+namespace Muthur.Contracts;
 
 public static class AgentConstants
 {

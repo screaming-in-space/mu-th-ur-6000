@@ -1,9 +1,9 @@
 using System.Text;
-using MuThUr.Contracts;
+using Muthur.Contracts;
 using UglyToad.PdfPig;
 using UglyToad.PdfPig.Content;
 
-namespace MuThUr.Worker.Activities;
+namespace Muthur.Bishop.Worker.Activities;
 
 /// <summary>
 /// PDF text extraction using PdfPig. Extracts text page-by-page with metadata.

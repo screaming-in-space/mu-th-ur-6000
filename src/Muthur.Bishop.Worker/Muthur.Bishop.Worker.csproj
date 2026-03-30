@@ -2,7 +2,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <RootNamespace>MuThUr.Worker</RootNamespace>
+    <RootNamespace>Muthur.Bishop.Worker</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -11,8 +11,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MuThUr.Contracts\MuThUr.Contracts.csproj" />
-    <ProjectReference Include="..\MuThUr.ServiceDefaults\MuThUr.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\Muthur.Contracts\Muthur.Contracts.csproj" />
+    <ProjectReference Include="..\Muthur.ServiceDefaults\Muthur.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

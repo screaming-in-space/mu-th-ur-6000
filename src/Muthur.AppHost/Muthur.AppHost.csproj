@@ -4,7 +4,7 @@
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
-    <RootNamespace>MuThUr.AppHost</RootNamespace>
+    <RootNamespace>Muthur.AppHost</RootNamespace>
     <IsAspireHost>true</IsAspireHost>
   </PropertyGroup>
 
@@ -13,8 +13,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\MuThUr.Api\MuThUr.Api.csproj" />
-    <ProjectReference Include="..\MuThUr.Worker\MuThUr.Worker.csproj" />
+    <ProjectReference Include="..\Muthur.Api\Muthur.Api.csproj" />
+    <ProjectReference Include="..\Muthur.Bishop.Worker\Muthur.Bishop.Worker.csproj" />
   </ItemGroup>
 
 </Project>

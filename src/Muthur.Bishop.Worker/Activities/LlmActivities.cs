@@ -1,8 +1,8 @@
 using Microsoft.Extensions.AI;
-using MuThUr.Contracts;
+using Muthur.Contracts;
 using Temporalio.Activities;
 
-namespace MuThUr.Worker.Activities;
+namespace Muthur.Bishop.Worker.Activities;
 
 /// <summary>
 /// Calls the LLM via M.E.AI's IChatClient. Each call is a Temporal activity —

@@ -1,7 +1,7 @@
-using MuThUr.Contracts;
+using Muthur.Contracts;
 using Temporalio.Client;
 
-namespace MuThUr.Api.Routes;
+namespace Muthur.Api.Routes;
 
 public static class AgentRoutes
 {

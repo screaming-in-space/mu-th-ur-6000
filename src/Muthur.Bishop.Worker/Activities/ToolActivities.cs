@@ -1,6 +1,6 @@
 using Temporalio.Activities;
 
-namespace MuThUr.Worker.Activities;
+namespace Muthur.Bishop.Worker.Activities;
 
 /// <summary>
 /// Dynamic tool dispatcher. Routes tool calls by name to the appropriate handler.

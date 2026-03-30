@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenAI;
 
-namespace MuThUr.ServiceDefaults;
+namespace Muthur.ServiceDefaults;
 
 public static class AiClientExtensions
 {

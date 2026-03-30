@@ -1,8 +1,8 @@
-using MuThUr.Contracts;
-using MuThUr.Worker.Activities;
+using Muthur.Bishop.Worker.Activities;
+using Muthur.Contracts;
 using Temporalio.Workflows;
 
-namespace MuThUr.Worker.Workflows;
+namespace Muthur.Bishop.Worker.Workflows;
 
 /// <summary>
 /// Durable agentic loop. Receives user prompts via signal, runs the LLM,
