@@ -7,7 +7,7 @@ Companion repo for the threadunsafe.dev article. Built by one person.
 
 | File | Owns | Read when |
 |------|------|-----------|
-| `docs/RULES.md` | Technical constraints, Temporal/M.E.AI/PdfPig best practices, rejected patterns | You're about to write or modify code |
+| `docs/RULES.md` | Technical constraints, best practices for Temporal/M.E.AI/PdfPig/pgvector/Redis, rejected patterns | You're about to write or modify code |
 | `docs/STRUCTURE.md` | Project architecture, file map, dependency graph, data flow | You need to find something or add a new file |
 
 ## Quick Start
@@ -16,11 +16,11 @@ Companion repo for the threadunsafe.dev article. Built by one person.
 dotnet run --project src/Muthur.AppHost
 ```
 
-Requires Docker Desktop (auto-launched if not running). Aspire starts the Temporal container, waits for health check, then starts the Worker and API.
+Requires Docker Desktop (auto-launched if not running). Aspire starts Temporal, Postgres (pgvector), and Redis containers, waits for health checks, then starts the Worker and API.
 
 ## Development Environment
 
 - Windows, CRLF line endings
 - .NET 10 / C# 14.0
-- Docker Desktop for Temporal container
+- Docker Desktop for container resources (Temporal, Postgres, Redis)
 - `nuget.config` clears global sources — only `api.nuget.org`

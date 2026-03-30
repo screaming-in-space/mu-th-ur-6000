@@ -1,10 +1,12 @@
 # Muthur.Bishop.Worker
 
-Temporal worker hosting the agentic loop workflow and all activities.
+Temporal worker hosting the agentic loop workflow, document ingestion child workflow, and all activities.
 
-## The agentic loop
+## Workflows
 
-`AgentWorkflow` is a signal-driven Temporal workflow:
+### AgentWorkflow
+
+Signal-driven agentic loop:
 
 1. Waits for `PromptSignal` via `WaitConditionAsync`
 2. Calls `LlmActivities.CallLlmAsync` — sends conversation history to the LLM
@@ -13,27 +15,29 @@ Temporal worker hosting the agentic loop workflow and all activities.
 5. When no tool calls remain: returns the final response
 6. After 50 turns: `ContinueAsNew` with a fresh event history
 
-Every LLM call and every tool call is a separate Temporal checkpoint. If the process crashes mid-loop, Temporal replays from the event history — completed activities return their cached results instantly.
+When the `store_document` tool completes, the workflow fires `DocumentIngestionWorkflow` as a child workflow with `ParentClosePolicy.Abandon` — ingestion runs independently and survives `ContinueAsNew`.
+
+### DocumentIngestionWorkflow
+
+Child workflow for document ingestion:
+
+1. `ChunkTextAsync` — split text into ~500-token chunks with 50-token overlap
+2. `GenerateEmbeddingsAsync` — batch call to `IEmbeddingGenerator` (OpenAI `text-embedding-3-small`)
+3. `StoreChunksAsync` — bulk INSERT chunks + embeddings to Postgres with pgvector
+
+Each step is individually checkpointed. If embedding fails, chunking doesn't re-run.
 
 ## Files
 
 | File | Purpose |
 |------|---------|
-| `Program.cs` | Generic host setup — DI, Temporal worker registration |
-| `Workflows/AgentWorkflow.cs` | Signal-driven agentic loop with `ContinueAsNew` |
+| `Program.cs` | Generic host setup — DI for tools, data, embeddings, Temporal registration |
+| `Workflows/AgentWorkflow.cs` | Signal-driven agentic loop + child workflow trigger |
+| `Workflows/DocumentIngestionWorkflow.cs` | Chunk → embed → store pipeline |
 | `Activities/LlmActivities.cs` | `IChatClient.GetResponseAsync` + tool call extraction |
 | `Activities/ToolActivities.cs` | Name-based tool dispatch via `ToolRegistry` |
-| `Activities/PdfActivities.cs` | PdfPig text extraction — static, no DI |
-| `Activities/ToolRegistry.cs` | `AIFunctionFactory.Create()` registration + handler dictionary |
-
-## Adding a tool
-
-1. Write a static async handler: `async Task<string> MyTool(string arguments)`
-2. In `ToolRegistry`, add an `AIFunctionFactory.Create()` call with `[Description]` attributes
-3. Add a handler mapping: `_handlers["my_tool"] = MyTool;`
-
-The workflow and activity dispatch code don't change.
+| `Activities/IngestionActivities.cs` | Chunk text, generate embeddings, store chunks |
 
 ## Configuration
 
-The Worker reads `ConnectionStrings:muthur-temporal-dev` from Aspire, falling back to `Temporal:Address` or `localhost:7233`. AI provider settings come from `AI:Provider`, `AI:Model`, `AI:ApiKey`, `AI:Endpoint`.
+Reads `ConnectionStrings:muthur-temporal-dev` from Aspire, falling back to `Temporal:Address` or `localhost:7233`. AI settings from `AI:Provider`, `AI:Model`, `AI:ApiKey`, `AI:Endpoint`, `AI:EmbeddingModel`.
