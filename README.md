@@ -25,11 +25,12 @@ Requires Docker Desktop (auto-launched if not running) and .NET 10 SDK.
 ## What happens
 
 1. Aspire starts three containers (Temporal, Postgres with pgvector, Redis) and waits for health checks
-2. The Worker connects to Temporal and registers the `AgentWorkflow` + `DocumentIngestionWorkflow`
+2. The Doc Worker connects to Temporal and registers both workflows
 3. The API exposes endpoints for agent sessions and document access
 4. Each prompt enters the agentic loop: LLM → tool decision → tool execution → back to LLM → until done
 5. Every LLM call and every tool call is a Temporal activity checkpoint
-6. When the agent stores a document, a child workflow chunks the text, generates embeddings, and stores them in Postgres with pgvector for semantic search
+6. When the agent stores a document, the response goes back to the user immediately
+7. In the background, Temporal forks a vectorize child workflow that chunks the text, calls the embedding model, and stores vectors in pgvector for semantic search
 
 ## Try it
 

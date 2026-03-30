@@ -24,8 +24,10 @@ Technical constraints and rejected patterns for mu-th-ur-6000.
 - Use `WaitConditionAsync` for signal-driven loops. Never `Task.Delay` to poll.
 - Use `RetryPolicy` on tool activities. LLM activities get a single attempt with a long timeout.
 - Use scoped activities (`AddScopedActivities<T>`) for DI - each execution gets a fresh scope.
-- Use child workflows for multi-step background work (document ingestion). Set `ParentClosePolicy.Abandon` so child survives parent `ContinueAsNew`.
+- Use child workflows for multi-step background work (the vectorize pipeline). Set `ParentClosePolicy.Abandon` so child survives parent `ContinueAsNew`. Return the response to the user before forking the child.
 - Give child workflows deterministic IDs (`ingest-{documentId}`) for idempotency.
+- Use activity chaining to keep work running on a warm worker — avoids repeated scheduling overhead for sequential steps.
+- Use long-running activities for work that must execute continuously (e.g., batch processing). The scheduling overhead (~50ms) is at the dispatch boundary, not inside the activity — once running, execution is at language speed.
 
 ### Don't
 
@@ -35,7 +37,7 @@ Technical constraints and rejected patterns for mu-th-ur-6000.
 - Don't call non-deterministic code (DateTime.Now, Guid.NewGuid, HTTP) directly in workflows. Wrap in activities.
 - Don't reference Worker types from the Api project. Use untyped Temporal handles (string-based workflow/signal names).
 - Don't use `with` expressions inside `Workflow.CreateContinueAsNewException` lambdas - they're expression trees. Create local variables first.
-- Don't block the agent conversation on child workflow completion. Fire-and-forget with `Abandon`.
+- Don't block the agent conversation on child workflow completion. Return the response first, then fork the vectorize pipeline with `Abandon`.
 
 ## M.E.AI / IChatClient / VectorData
 

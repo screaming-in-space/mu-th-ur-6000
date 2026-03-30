@@ -15,15 +15,15 @@ Signal-driven agentic loop:
 5. When no tool calls remain: returns the final response
 6. After 50 turns: `ContinueAsNew` with a fresh event history
 
-When the `store_document` tool completes, the workflow fires `DocumentIngestionWorkflow` as a child workflow with `ParentClosePolicy.Abandon` - ingestion runs independently and survives `ContinueAsNew`.
+When the `store_document` tool completes, the response goes back to the user immediately. Then the workflow forks `DocumentIngestionWorkflow` as a child workflow with `ParentClosePolicy.Abandon` — the vectorize pipeline runs in the background and survives `ContinueAsNew`.
 
-### DocumentIngestionWorkflow
+### DocumentIngestionWorkflow (the "Vectorize" pipeline)
 
-Child workflow for document ingestion:
+Child workflow that chunks, embeds, and stores vectors:
 
-1. `ChunkTextAsync` - split text into ~500-token chunks with 50-token overlap
-2. `GenerateEmbeddingsAsync` - batch call to `IEmbeddingGenerator` (OpenAI `text-embedding-3-small`)
-3. `StoreChunksAsync` - bulk INSERT chunks + embeddings to Postgres with pgvector
+1. `ChunkTextAsync` — split text into ~500-token chunks with 50-token overlap
+2. `GenerateEmbeddingsAsync` — call embedding model via `IEmbeddingGenerator`
+3. `StoreChunksAsync` — bulk INSERT chunks + embeddings to Postgres with pgvector
 
 Each step is individually checkpointed. If embedding fails, chunking doesn't re-run.
 

@@ -10,15 +10,18 @@ mu-th-ur-6000/
 │   ├── RULES.md                    # Technical constraints, rejected patterns
 │   └── STRUCTURE.md                # This file
 ├── src/
-│   ├── Aspire.Hosting.Temporal/    # Aspire extension for Temporal container
-│   ├── Muthur.AppHost/             # Aspire orchestration host
-│   ├── Muthur.Api/                 # Minimal API - HTTP endpoints
-│   ├── Muthur.Bishop.Worker/       # Temporal worker - workflows + activities
-│   ├── Muthur.Contracts/           # Shared types - no dependencies
-│   ├── Muthur.Data/                # Postgres + Redis - document storage + vector search
-│   ├── Muthur.Logging/             # Serilog structured logging
-│   ├── Muthur.ServiceDefaults/     # Shared DI, M.E.AI pipeline
-│   └── Muthur.Tools/              # Agent tools - PDF extraction, document storage
+│   ├── Aspire/                     # Infrastructure & orchestration
+│   │   ├── Aspire.Hosting.Temporal/  # Aspire extension for Temporal container
+│   │   └── Muthur.AppHost/          # Aspire orchestration host
+│   ├── Core/                       # Shared libraries - no host dependencies
+│   │   ├── Muthur.Contracts/         # Shared types - no dependencies
+│   │   ├── Muthur.Data/              # Postgres + Redis - document storage + vector search
+│   │   ├── Muthur.Logging/           # Serilog structured logging
+│   │   ├── Muthur.ServiceDefaults/   # Shared DI, M.E.AI pipeline
+│   │   └── Muthur.Tools/             # Agent tools - PDF extraction, document storage
+│   └── Hosts/                      # Runnable services
+│       ├── Muthur.Api/               # Minimal API - HTTP endpoints
+│       └── Muthur.Bishop.Worker/     # Temporal worker - workflows + activities
 ├── samples/                        # Sample PDFs for testing
 ├── .claude/
 │   └── launch.json                 # Preview tool config
@@ -145,56 +148,75 @@ Serilog structured logging with optional JSON output and OTLP export.
 ## Dependency Graph
 
 ```
-AppHost
-├── Aspire.Hosting.Temporal  (IsAspireProjectResource=false)
-├── Api
-│   ├── Contracts
-│   ├── Data
-│   │   └── Contracts
-│   └── ServiceDefaults
-│       └── Logging
-└── Bishop.Worker
-    ├── Contracts
-    ├── Data
-    │   └── Contracts
-    ├── ServiceDefaults
-    │   └── Logging
-    └── Tools
-        ├── Contracts
-        └── Data
+Aspire/
+  AppHost
+  ├── Aspire.Hosting.Temporal  (IsAspireProjectResource=false)
+  ├── Hosts/Api
+  └── Hosts/Bishop.Worker
+
+Hosts/
+  Api
+  ├── Core/Contracts
+  ├── Core/Data
+  │   └── Core/Contracts
+  └── Core/ServiceDefaults
+      └── Core/Logging
+
+  Bishop.Worker
+  ├── Core/Contracts
+  ├── Core/Data
+  │   └── Core/Contracts
+  ├── Core/ServiceDefaults
+  │   └── Core/Logging
+  └── Core/Tools
+      ├── Core/Contracts
+      └── Core/Data
 ```
 
-Api and Worker share Contracts, Data, and ServiceDefaults but never reference each other.
+Api and Worker (both in `Hosts/`) share everything in `Core/` but never reference each other.
 The Api talks to workflows via untyped Temporal handles (string-based names).
 Tools is isolated from the Worker - the Worker owns Temporal activities, Tools owns handlers.
 
 ## Data Flow
 
-### Agent Conversation
+### Agent Conversation (animation steps 1–6)
 
 ```
-HTTP request → Api (Routes/Agent.cs)
-  → Temporal client: StartWorkflowAsync / SignalAsync / QueryAsync
-  → AgentWorkflow (signal queue → WaitConditionAsync)
-    → LlmActivities.CallLlmAsync (IChatClient → LLM provider)
-    → if tool calls: ToolActivities.ExecuteToolAsync → ToolRegistry → handler
-    → loop back to LLM until no tool calls
-    → return final response via AgentState query
+1. User sends prompt → Temporal (signal)
+2. Temporal dispatches → Doc Worker (workflow)
+3. Doc Worker calls → LLM (activity)
+4. Doc Worker calls → Tool Registry (extract_pdf_text, store_document)
+5. Tool writes document → PostgreSQL
+6. Response returned → User
 ```
 
-### Document Ingestion
+### Vectorize Pipeline (child workflow)
 
 ```
 Agent calls store_document tool
   → DocumentStoreHandler → INSERT into documents table (fast, one activity)
+  → Response returned to user immediately
   → AgentWorkflow detects store_document result
-  → Starts DocumentIngestionWorkflow as child (ParentClosePolicy.Abandon)
+  → Forks DocumentIngestionWorkflow as child (ParentClosePolicy.Abandon)
     → IngestionActivities.ChunkTextAsync (~500-token chunks with overlap)
-    → IngestionActivities.GenerateEmbeddingsAsync (IEmbeddingGenerator → OpenAI)
+    → IngestionActivities.GenerateEmbeddingsAsync (IEmbeddingGenerator → embedding model)
     → IngestionActivities.StoreChunksAsync (bulk INSERT with pgvector embeddings)
+    → Document cached in Redis
 ```
 
-### Document Search
+Note: The animation calls this the "Vec Worker" / "Vectorize" pipeline.
+The code type is `DocumentIngestionWorkflow` — same thing, different lens.
+
+### Vectorize Pipeline (animation steps 7–10)
+
+```
+7. Temporal forks → Vec Worker (child workflow, background)
+8. Vec Worker stores vectors → PostgreSQL (pgvector)
+9. Vec Worker calls → embedding model (LLM activity)
+10. Vec Worker caches → Redis
+```
+
+### Document Search (API, not animated)
 
 ```
 GET /v1/documents/search?q=...
