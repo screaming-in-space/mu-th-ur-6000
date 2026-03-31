@@ -92,7 +92,7 @@ Set via user secrets or environment variables on the Worker:
 |-----|---------|---------|
 | `AI:Provider` | `openai` | `openai`, `anthropic`, or any OpenAI-compatible |
 | `AI:Model` | `gpt-4.1` | Chat model name |
-| `AI:EmbeddingModel` | `text-embedding-3-small` | Embedding model (1536 dimensions) |
+| `AI:EmbeddingModel` | `nomic-embed-text-v1.5` | Embedding model (768 dimensions) |
 | `AI:ApiKey` | - | API key (required) |
 | `AI:Endpoint` | - | Custom endpoint URL (optional) |
 | `Logging:Format` | - | Set to `json` for structured JSON output |

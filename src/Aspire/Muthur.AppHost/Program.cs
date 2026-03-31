@@ -6,6 +6,9 @@ await builder.EnsureDockerAsync();
 
 var temporal = builder.AddTemporalDevServer("muthur-temporal-dev");
 
+var lmstudio = builder.AddLMStudio("muthur-lmstudio")
+    .WithModel("nemotron-3-nano-4b");
+
 var postgres = builder.AddPostgres("muthur-postgres")
     .WithImage("pgvector/pgvector")
     .WithImageTag("pg17")
@@ -17,17 +20,21 @@ var cache = builder.AddRedis("muthur-cache")
 
 var api = builder.AddProject<Projects.Muthur_Api>("muthur-api")
     .WithReference(temporal)
+    .WithReference(lmstudio)
     .WithReference(postgres)
     .WithReference(cache)
     .WaitFor(temporal)
+    .WaitFor(lmstudio)
     .WaitFor(postgres)
     .WaitFor(cache);
 
 var worker = builder.AddProject<Projects.Muthur_Bishop_Worker>("muthur-bishop-worker")
     .WithReference(temporal)
+    .WithReference(lmstudio)
     .WithReference(postgres)
     .WithReference(cache)
     .WaitFor(temporal)
+    .WaitFor(lmstudio)
     .WaitFor(postgres)
     .WaitFor(cache);
 

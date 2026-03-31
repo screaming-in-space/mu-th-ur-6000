@@ -24,7 +24,7 @@ The pipeline does **not** include `FunctionInvokingChatClient` - tool call dispa
 Registers `IEmbeddingGenerator<string, Embedding<float>>` for vector embedding generation:
 
 1. Reads `AI:ApiKey`, `AI:Endpoint`, `AI:EmbeddingModel` from configuration
-2. Defaults to OpenAI `text-embedding-3-small` (1536 dimensions)
+2. Defaults to OpenAI `text-embedding-3-small` (768 dimensions)
 3. Used by `IngestionActivities` for document chunk embeddings and by the API for search query embeddings
 
 ## Dependencies

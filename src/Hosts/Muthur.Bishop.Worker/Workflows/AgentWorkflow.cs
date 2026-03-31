@@ -30,9 +30,15 @@ public class AgentWorkflow
             var signal = _pending.Dequeue();
 
             _isProcessing = true;
+            Workflow.Logger.LogInformation("Processing prompt (turn {Turn}): {Prompt}",
+                _turnCount, signal.Content[..Math.Min(signal.Content.Length, 100)]);
+
             _lastResponse = await ProcessPromptAsync(signal, input.SystemPrompt);
             _isProcessing = false;
             _turnCount++;
+
+            Workflow.Logger.LogInformation("Turn {Turn} complete — response: {Response}",
+                _turnCount, _lastResponse?[..Math.Min(_lastResponse?.Length ?? 0, 100)]);
 
             // Prevent unbounded event history growth.
             if (_turnCount >= AgentConstants.MaxTurnsBeforeContinueAsNew)
@@ -67,8 +73,12 @@ public class AgentWorkflow
             // No tool calls - the LLM produced a final response.
             if (llmOutput.ToolCalls.Length == 0)
             {
+                Workflow.Logger.LogInformation("LLM produced final response ({Length} chars)", llmOutput.Content?.Length ?? 0);
                 return llmOutput.Content ?? "(no response)";
             }
+
+            Workflow.Logger.LogInformation("LLM requested {Count} tool call(s): {Tools}",
+                llmOutput.ToolCalls.Length, string.Join(", ", llmOutput.ToolCalls.Select(t => t.Name)));
 
             // Append the assistant's tool-call message to history.
             messages.Add(new ConversationMessage(

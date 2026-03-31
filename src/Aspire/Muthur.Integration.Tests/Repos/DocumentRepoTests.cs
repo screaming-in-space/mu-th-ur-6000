@@ -76,8 +76,8 @@ public sealed class DocumentRepoTests(MuthurFixture platform)
         var id = await repo.StoreDocumentAsync(
             "Vector Test", "/test/vector.pdf", "embeddings content", 1, []);
 
-        // Create a deterministic embedding (1536 dims, first dim = 1.0).
-        var embedding = new float[1536];
+        // Create a deterministic embedding (768 dims, first dim = 1.0).
+        var embedding = new float[768];
         embedding[0] = 1.0f;
 
         var chunks = new List<TextChunk>

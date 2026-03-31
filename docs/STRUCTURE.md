@@ -11,8 +11,10 @@ mu-th-ur-6000/
 │   └── STRUCTURE.md                # This file
 ├── src/
 │   ├── Aspire/                     # Infrastructure & orchestration
+│   │   ├── Aspire.Hosting.LMStudio/  # Aspire extension for LM Studio (external resource)
 │   │   ├── Aspire.Hosting.Temporal/  # Aspire extension for Temporal container
-│   │   └── Muthur.AppHost/          # Aspire orchestration host
+│   │   ├── Muthur.AppHost/          # Aspire orchestration host
+│   │   └── Muthur.Integration.Tests/ # Integration tests (shared Aspire fixture)
 │   ├── Apps/                       # User-facing applications
 │   │   └── Muthur.Console/           # Demo CLI - kicks off agent jobs
 │   ├── Core/                       # Shared libraries - no host dependencies
@@ -298,6 +300,7 @@ GET /v1/documents/search?q=...
 | Resource | Image | Persistent | Health Check |
 |----------|-------|-----------|--------------|
 | `muthur-temporal-dev` | `temporalio/admin-tools:latest` | Yes | HTTP on UI port (8233) |
+| `muthur-lmstudio` | External (LM Studio) | N/A | GET /v1/models |
 | `muthur-postgres` / `muthur-db` | `pgvector/pgvector:pg17` | Yes | TCP |
 | `muthur-cache` | Redis | Yes | TCP |
 

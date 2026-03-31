@@ -85,7 +85,7 @@ Technical constraints and rejected patterns for mu-th-ur-6000.
 - Use the `pgvector/pgvector:pg17` Docker image - ships with the vector extension pre-installed.
 - Register `NpgsqlDataSource` via Aspire's `AddNpgsqlDataSource()` with `dsb.UseVector()`. The `UseVector()` extension is in the `Npgsql` namespace (not `Pgvector.Npgsql` - that's the internal namespace, not the import you need).
 - Register `Pgvector.Dapper.VectorTypeHandler` via `SqlMapper.AddTypeHandler(new VectorTypeHandler())` for Dapper compatibility.
-- Use `vector(1536)` columns for OpenAI `text-embedding-3-small` embeddings.
+- Use `vector(768)` columns for OpenAI `text-embedding-3-small` embeddings.
 - Use HNSW index (`USING hnsw ... vector_cosine_ops`) for approximate nearest neighbor search.
 - Use `1 - (embedding <=> @Embedding)` for cosine similarity score (0 = orthogonal, 1 = identical).
 - Keep migrations idempotent (`CREATE TABLE IF NOT EXISTS`, `CREATE INDEX IF NOT EXISTS`).

@@ -1,4 +1,5 @@
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenAI;
@@ -9,14 +10,16 @@ public static class AiClientExtensions
 {
     /// <summary>
     /// Registers an <see cref="IChatClient"/> using the M.E.AI pipeline.
-    /// Reads "AI:Provider" and "AI:Model" from configuration. Defaults to OpenAI-compatible.
+    /// Reads the LM Studio connection string first, then falls back to AI:* config keys.
     /// </summary>
     public static IHostApplicationBuilder AddAgentChatClient(this IHostApplicationBuilder builder)
     {
+        var (lmEndpoint, lmModel) = ParseLMStudioConnectionString(builder);
+
         var provider = builder.Configuration["AI:Provider"] ?? "openai";
-        var model = builder.Configuration["AI:Model"] ?? "gpt-4.1";
-        var apiKey = builder.Configuration["AI:ApiKey"] ?? "";
-        var endpoint = builder.Configuration["AI:Endpoint"];
+        var model = lmModel ?? builder.Configuration["AI:Model"] ?? "gpt-4.1";
+        var apiKey = builder.Configuration["AI:ApiKey"] ?? "lm-studio";
+        var endpoint = lmEndpoint ?? builder.Configuration["AI:Endpoint"];
 
         builder.Services.AddChatClient(services =>
         {
@@ -37,13 +40,15 @@ public static class AiClientExtensions
 
     /// <summary>
     /// Registers an <see cref="IEmbeddingGenerator{String, Embedding}"/> for vector embedding generation.
-    /// Uses OpenAI's text-embedding-3-small (1536 dimensions) by default.
+    /// Uses nomic-embed-text-v1.5 (768 dimensions) by default for local LM Studio.
     /// </summary>
     public static IHostApplicationBuilder AddAgentEmbeddingGenerator(this IHostApplicationBuilder builder)
     {
-        var apiKey = builder.Configuration["AI:ApiKey"] ?? "";
-        var endpoint = builder.Configuration["AI:Endpoint"];
-        var embeddingModel = builder.Configuration["AI:EmbeddingModel"] ?? "text-embedding-3-small";
+        var (lmEndpoint, _) = ParseLMStudioConnectionString(builder);
+
+        var apiKey = builder.Configuration["AI:ApiKey"] ?? "lm-studio";
+        var endpoint = lmEndpoint ?? builder.Configuration["AI:Endpoint"];
+        var embeddingModel = builder.Configuration["AI:EmbeddingModel"] ?? "nomic-embed-text-v1.5";
 
         builder.Services.AddEmbeddingGenerator(services =>
         {
@@ -59,6 +64,32 @@ public static class AiClientExtensions
         return builder;
     }
 
+    /// <summary>
+    /// Parses the LM Studio connection string injected by Aspire: <c>Endpoint=...;Model=...</c>
+    /// </summary>
+    private static (string? Endpoint, string? Model) ParseLMStudioConnectionString(
+        IHostApplicationBuilder builder)
+    {
+        var connectionString = builder.Configuration.GetConnectionString("muthur-lmstudio");
+        if (connectionString is null) return (null, null);
+
+        string? endpoint = null, model = null;
+
+        foreach (var part in connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries))
+        {
+            var kv = part.Split('=', 2);
+            if (kv.Length != 2) continue;
+
+            var key = kv[0].Trim();
+            var value = kv[1].Trim();
+
+            if (key.Equals("Endpoint", StringComparison.OrdinalIgnoreCase)) endpoint = value;
+            else if (key.Equals("Model", StringComparison.OrdinalIgnoreCase)) model = value;
+        }
+
+        return (endpoint, model);
+    }
+
     private static IChatClient CreateOpenAiClient(string model, string apiKey, string? endpoint)
     {
         var options = new OpenAIClientOptions();
@@ -71,8 +102,6 @@ public static class AiClientExtensions
 
     private static IChatClient CreateAnthropicClient(string model, string apiKey)
     {
-        // For Anthropic, use the OpenAI-compatible endpoint or the Anthropic SDK.
-        // Using OpenAI-compatible mode for simplicity in this demo.
         var options = new OpenAIClientOptions
         {
             Endpoint = new Uri("https://api.anthropic.com/v1/")

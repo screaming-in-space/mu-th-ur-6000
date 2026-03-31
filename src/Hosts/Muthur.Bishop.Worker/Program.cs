@@ -1,6 +1,7 @@
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 using Muthur.Bishop.Worker.Activities;
 using Muthur.Bishop.Worker.Workflows;
 using Muthur.Contracts;
@@ -42,4 +43,12 @@ builder.Services.AddTemporalClient(options =>
 });
 
 var host = builder.Build();
+
+var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Muthur.Bishop.Worker");
+var targetHost = builder.Configuration.GetConnectionString("muthur-temporal-dev")
+    ?? builder.Configuration["Temporal:Address"]
+    ?? "localhost:7233";
+logger.LogInformation("Bishop Worker starting — Temporal target: {TargetHost}, TaskQueue: {TaskQueue}",
+    targetHost, AgentConstants.TaskQueue);
+
 await host.RunAsync();

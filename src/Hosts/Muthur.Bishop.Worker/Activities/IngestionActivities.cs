@@ -1,4 +1,5 @@
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 using Muthur.Contracts;
 using Muthur.Data;
 using Temporalio.Activities;
@@ -10,6 +11,7 @@ namespace Muthur.Bishop.Worker.Activities;
 /// Each step is individually checkpointed by Temporal.
 /// </summary>
 public class IngestionActivities(
+    ILogger<IngestionActivities> logger,
     IDocumentRepository repository,
     IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
 {
@@ -48,21 +50,30 @@ public class IngestionActivities(
             position = nextPosition <= position ? end : nextPosition; // prevent infinite loop
         }
 
+        logger.LogInformation("Chunked {TextLength} chars into {ChunkCount} chunks", text.Length, chunks.Count);
         return Task.FromResult(chunks.ToArray());
     }
 
     [Activity]
     public async Task<float[][]> GenerateEmbeddingsAsync(TextChunk[] chunks)
     {
+        logger.LogInformation("Generating embeddings for {ChunkCount} chunks", chunks.Length);
+
         var texts = chunks.Select(c => c.Text).ToList();
         var result = await embeddingGenerator.GenerateAsync(texts);
+        var embeddings = result.Select(e => e.Vector.ToArray()).ToArray();
 
-        return result.Select(e => e.Vector.ToArray()).ToArray();
+        logger.LogInformation("Generated {Count} embeddings ({Dims} dims each)",
+            embeddings.Length, embeddings.FirstOrDefault()?.Length ?? 0);
+
+        return embeddings;
     }
 
     [Activity]
     public async Task StoreChunksAsync(Guid documentId, TextChunk[] chunks, float[][] embeddings)
     {
+        logger.LogInformation("Storing {ChunkCount} chunks for document {DocumentId}", chunks.Length, documentId);
         await repository.StoreChunksAsync(documentId, chunks, embeddings);
+        logger.LogInformation("Stored {ChunkCount} chunks for document {DocumentId}", chunks.Length, documentId);
     }
 }

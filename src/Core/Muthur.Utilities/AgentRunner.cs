@@ -5,7 +5,7 @@ using Muthur.Contracts;
 namespace Muthur.Utilities;
 
 /// <summary>
-/// Orchestrates a single agent job: create session → send prompt → poll until done.
+/// Orchestrates a single agent job: create session, send prompt, poll until done.
 /// Decoupled from hosting — usable from console apps, tests, or background services.
 /// </summary>
 public sealed class AgentRunner(ILogger<AgentRunner> logger, MuthurApiClient client)
@@ -13,7 +13,6 @@ public sealed class AgentRunner(ILogger<AgentRunner> logger, MuthurApiClient cli
     /// <summary>
     /// Creates a session, sends a prompt, and polls until the agent finishes or the timeout expires.
     /// </summary>
-    /// <returns>The completed <see cref="AgentState"/>, or <c>null</c> if the poll timed out.</returns>
     public async Task<AgentRunResult> RunAsync(
         AgentJobRequest job,
         CancellationToken cancellationToken = default)
@@ -41,7 +40,8 @@ public sealed class AgentRunner(ILogger<AgentRunner> logger, MuthurApiClient cli
     }
 
     /// <summary>
-    /// Polls agent state until processing completes or the timeout expires.
+    /// Polls agent state until the workflow has processed at least one turn and is idle,
+    /// or the timeout expires.
     /// </summary>
     /// <returns>The final <see cref="AgentState"/>, or <c>null</c> if timed out.</returns>
     public async Task<AgentState?> PollUntilCompleteAsync(
@@ -63,7 +63,10 @@ public sealed class AgentRunner(ILogger<AgentRunner> logger, MuthurApiClient cli
                 logger.LogInformation("Turn {Turn} | Processing={IsProcessing}",
                     state.TurnCount, state.IsProcessing);
 
-                if (!state.IsProcessing && state.LastResponse is not null)
+                // TurnCount > 0 means the workflow has processed a prompt.
+                // IsProcessing == false means it's done with the current turn.
+                // This avoids the race where we poll before the signal is picked up.
+                if (state.TurnCount > 0 && !state.IsProcessing)
                 {
                     return state;
                 }

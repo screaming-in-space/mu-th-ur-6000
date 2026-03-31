@@ -11,7 +11,7 @@ Persistence layer. Owns Postgres with pgvector and Redis caching.
 Two tables, created idempotently on startup by `MigrationService`:
 
 - **`documents`** - id, title, source_path, content, page_count, metadata (JSONB), created_at
-- **`document_chunks`** - id, document_id (FK), chunk_index, chunk_text, embedding `vector(1536)`, created_at
+- **`document_chunks`** - id, document_id (FK), chunk_index, chunk_text, embedding `vector(768)`, created_at
 
 HNSW index on the embedding column for fast approximate nearest neighbor search.
 

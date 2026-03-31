@@ -16,6 +16,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\Aspire.Hosting.LMStudio\Aspire.Hosting.LMStudio.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="..\Aspire.Hosting.Temporal\Aspire.Hosting.Temporal.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="..\..\Hosts\Muthur.Api\Muthur.Api.csproj" />
     <ProjectReference Include="..\..\Hosts\Muthur.Bishop.Worker\Muthur.Bishop.Worker.csproj" />

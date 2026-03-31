@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 using Muthur.Contracts;
 using Muthur.Telemetry;
 using Muthur.Tools;
@@ -11,11 +12,12 @@ namespace Muthur.Bishop.Worker.Activities;
 /// Calls the LLM via M.E.AI's IChatClient. Each call is a Temporal activity -
 /// if it fails, Temporal retries it without re-executing prior activities.
 /// </summary>
-public class LlmActivities(IChatClient chatClient, ToolRegistry toolRegistry)
+public class LlmActivities(ILogger<LlmActivities> logger, IChatClient chatClient, ToolRegistry toolRegistry)
 {
     [Activity]
     public async Task<LlmActivityOutput> CallLlmAsync(LlmActivityInput input)
     {
+        logger.LogInformation("Calling LLM with {MessageCount} messages", input.Messages.Count);
         var stopwatch = Stopwatch.StartNew();
 
         // Build the message list for M.E.AI.
@@ -81,6 +83,9 @@ public class LlmActivities(IChatClient chatClient, ToolRegistry toolRegistry)
         var textContent = string.Join("", response.Messages
             .SelectMany(m => m.Contents.OfType<TextContent>())
             .Select(t => t.Text));
+
+        logger.LogInformation("LLM responded in {Duration:F1}s — {ToolCallCount} tool calls, {ContentLength} chars",
+            stopwatch.Elapsed.TotalSeconds, toolCalls.Length, textContent.Length);
 
         return new LlmActivityOutput(textContent, toolCalls);
     }
