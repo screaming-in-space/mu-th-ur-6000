@@ -13,10 +13,10 @@ Companion repo for the threadunsafe.dev article. Built by one person.
 ## Quick Start
 
 ```
-dotnet run --project src/Muthur.AppHost
+dotnet run --project src/Aspire/Muthur.AppHost
 ```
 
-Requires Docker Desktop (auto-launched if not running). Aspire starts Temporal, Postgres (pgvector), and Redis containers, waits for health checks, then starts the Worker and API.
+Requires Docker Desktop (auto-launched if not running). Aspire starts Temporal, Postgres (pgvector), and Redis containers, waits for health checks, then starts the Worker, API, and Console.
 
 ## Development Environment
 

@@ -30,8 +30,10 @@ mu-th-ur-6000/
 ├── samples/                        # Sample PDFs for testing
 ├── .claude/
 │   └── launch.json                 # Preview tool config
-├── CLAUDE.md                       # Agent entry point
-├── Directory.Build.props           # net10.0, C# 14.0, nullable
+├── .claude/
+│   └── CLAUDE.md                   # Agent entry point
+├── Directory.Build.props           # net10.0, C# 14.0, nullable, version
+├── Directory.Packages.props        # Central Package Management - all NuGet versions
 ├── global.json                     # SDK pin
 ├── nuget.config                    # Isolated NuGet sources (<clear/>)
 └── Muthur.slnx                     # Solution manifest
@@ -68,7 +70,7 @@ Minimal API host. Agent lifecycle + document access endpoints.
 | File | Purpose |
 |------|---------|
 | `Program.cs` | Web host, service registration, data layer + embedding generator |
-| `Routes/Agent.cs` | `POST /v1/agent/sessions`, `POST .../prompt`, `GET .../state` |
+| `Routes/Agent.cs` | `POST /v1/agent/sessions`, `POST .../prompt`, `GET .../sessions/{agentId}` |
 | `Routes/Documents.cs` | `GET /v1/documents`, `GET .../{id}`, `GET .../{id}/content`, `GET .../search` |
 
 **Depends on:** Muthur.Contracts, Muthur.Data, Muthur.ServiceDefaults

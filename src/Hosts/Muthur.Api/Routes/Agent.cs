@@ -12,112 +12,115 @@ public static class AgentRoutes
         var group = app.MapGroup("/v1/agent")
             .WithTags("Agent");
 
-        // Start a new agent session.
-        group.MapPost("/sessions", async (
-            CreateSessionRequest request,
-            ITemporalClient temporal) =>
+        group.MapPost("/sessions", CreateSessionAsync)
+            .WithName("CreateSession")
+            .WithDescription("Start a new durable agent session backed by a Temporal workflow.")
+            .Produces<CreateSessionResponse>()
+            .ProducesProblem(StatusCodes.Status502BadGateway)
+            .ProducesValidationProblem();
+
+        group.MapPost("/sessions/{agentId}/prompt", SendPromptAsync)
+            .WithName("SendPrompt")
+            .WithDescription("Send a prompt signal to a running agent session.")
+            .Produces(StatusCodes.Status202Accepted)
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status502BadGateway)
+            .ProducesValidationProblem();
+
+        group.MapGet("/sessions/{agentId}", GetAgentStateAsync)
+            .WithName("GetAgentState")
+            .WithDescription("Query the current state of an agent session.")
+            .Produces<AgentState>()
+            .Produces(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status502BadGateway);
+    }
+
+    private static async Task<IResult> CreateSessionAsync(
+        CreateSessionRequest request,
+        ITemporalClient temporal)
+    {
+        var agentId = Guid.NewGuid().ToString("N")[..8];
+        var workflowId = AgentConstants.WorkflowId(agentId);
+
+        using var span = MuthurTrace.StartSpan("agent.create-session")
+            ?.WithTag("agent.id", agentId);
+
+        try
         {
-            var agentId = Guid.NewGuid().ToString("N")[..8];
-            var workflowId = AgentConstants.WorkflowId(agentId);
+            await temporal.StartWorkflowAsync(
+                "AgentWorkflow",
+                [new AgentWorkflowInput(agentId, request.SystemPrompt)],
+                new WorkflowOptions(workflowId, AgentConstants.TaskQueue));
 
-            using var span = MuthurTrace.StartSpan("agent.create-session")
-                ?.WithTag("agent.id", agentId);
+            MuthurMetrics.AgentSessions.Add(1);
+            span?.SetSuccess();
 
-            try
-            {
-                await temporal.StartWorkflowAsync(
-                    "AgentWorkflow",
-                    [new AgentWorkflowInput(agentId, request.SystemPrompt)],
-                    new WorkflowOptions(workflowId, AgentConstants.TaskQueue));
-
-                MuthurMetrics.AgentSessions.Add(1);
-                span?.SetSuccess();
-
-                return Results.Ok(new CreateSessionResponse(agentId, workflowId));
-            }
-            catch (WorkflowAlreadyStartedException)
-            {
-                span?.RecordError(new InvalidOperationException($"Session {agentId} already exists"));
-                return Results.Conflict(new { Error = $"Session {agentId} already exists" });
-            }
-            catch (RpcException ex)
-            {
-                span?.RecordError(ex);
-                return Results.Problem(
-                    detail: ex.Message,
-                    statusCode: StatusCodes.Status502BadGateway,
-                    title: "Temporal unavailable");
-            }
-        })
-        .WithName("CreateSession")
-        .WithDescription("Start a new durable agent session backed by a Temporal workflow.")
-        .Produces<CreateSessionResponse>()
-        .ProducesProblem(StatusCodes.Status502BadGateway)
-        .ProducesValidationProblem();
-
-        // Send a prompt to an existing agent.
-        group.MapPost("/sessions/{agentId}/prompt", async (
-            string agentId,
-            SendPromptRequest request,
-            ITemporalClient temporal) =>
+            return Results.Ok(new CreateSessionResponse(agentId, workflowId));
+        }
+        catch (WorkflowAlreadyStartedException)
         {
-            var handle = temporal.GetWorkflowHandle(AgentConstants.WorkflowId(agentId));
-
-            try
-            {
-                await handle.SignalAsync(
-                    "SendPromptAsync",
-                    [new PromptSignal(request.Content, request.SystemPrompt)]);
-
-                return Results.Accepted();
-            }
-            catch (RpcException ex) when (ex.Code == RpcException.StatusCode.NotFound)
-            {
-                return Results.NotFound(new { Error = $"Agent session '{agentId}' not found" });
-            }
-            catch (RpcException ex)
-            {
-                return Results.Problem(
-                    detail: ex.Message,
-                    statusCode: StatusCodes.Status502BadGateway,
-                    title: "Temporal unavailable");
-            }
-        })
-        .WithName("SendPrompt")
-        .WithDescription("Send a prompt signal to a running agent session.")
-        .Produces(StatusCodes.Status202Accepted)
-        .Produces(StatusCodes.Status404NotFound)
-        .ProducesProblem(StatusCodes.Status502BadGateway)
-        .ProducesValidationProblem();
-
-        // Query agent state.
-        group.MapGet("/sessions/{agentId}", async (
-            string agentId,
-            ITemporalClient temporal) =>
+            span?.RecordError(new InvalidOperationException($"Session {agentId} already exists"));
+            return Results.Conflict(new { Error = $"Session {agentId} already exists" });
+        }
+        catch (RpcException ex)
         {
-            var handle = temporal.GetWorkflowHandle(AgentConstants.WorkflowId(agentId));
+            span?.RecordError(ex);
+            return Results.Problem(
+                detail: ex.Message,
+                statusCode: StatusCodes.Status502BadGateway,
+                title: "Temporal unavailable");
+        }
+    }
 
-            try
-            {
-                var state = await handle.QueryAsync<AgentState>("GetState", []);
-                return Results.Ok(state);
-            }
-            catch (RpcException ex) when (ex.Code == RpcException.StatusCode.NotFound)
-            {
-                return Results.NotFound(new { Error = $"Agent session '{agentId}' not found" });
-            }
-            catch (RpcException ex)
-            {
-                return Results.Problem(
-                    detail: ex.Message,
-                    statusCode: StatusCodes.Status502BadGateway,
-                    title: "Temporal unavailable");
-            }
-        })
-        .WithName("GetAgentState")
-        .WithDescription("Query the current state of an agent session.")
-        .Produces<AgentState>()
-        .Produces(StatusCodes.Status404NotFound)
-        .ProducesProblem(StatusCodes.Status502BadGateway);
+    private static async Task<IResult> SendPromptAsync(
+        string agentId,
+        SendPromptRequest request,
+        ITemporalClient temporal)
+    {
+        var handle = temporal.GetWorkflowHandle(AgentConstants.WorkflowId(agentId));
+
+        try
+        {
+            await handle.SignalAsync(
+                "SendPromptAsync",
+                [new PromptSignal(request.Content, request.SystemPrompt)]);
+
+            return Results.Accepted();
+        }
+        catch (RpcException ex) when (ex.Code == RpcException.StatusCode.NotFound)
+        {
+            return Results.NotFound(new { Error = $"Agent session '{agentId}' not found" });
+        }
+        catch (RpcException ex)
+        {
+            return Results.Problem(
+                detail: ex.Message,
+                statusCode: StatusCodes.Status502BadGateway,
+                title: "Temporal unavailable");
+        }
+    }
+
+    private static async Task<IResult> GetAgentStateAsync(
+        string agentId,
+        ITemporalClient temporal)
+    {
+        var handle = temporal.GetWorkflowHandle(AgentConstants.WorkflowId(agentId));
+
+        try
+        {
+            var state = await handle.QueryAsync<AgentState>("GetState", []);
+            return Results.Ok(state);
+        }
+        catch (RpcException ex) when (ex.Code == RpcException.StatusCode.NotFound)
+        {
+            return Results.NotFound(new { Error = $"Agent session '{agentId}' not found" });
+        }
+        catch (RpcException ex)
+        {
+            return Results.Problem(
+                detail: ex.Message,
+                statusCode: StatusCodes.Status502BadGateway,
+                title: "Temporal unavailable");
+        }
     }
 }

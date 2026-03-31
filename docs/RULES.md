@@ -5,13 +5,14 @@ Technical constraints and rejected patterns for mu-th-ur-6000.
 ## Stack
 
 - .NET 10 / C# 14.0 - `LangVersion 14.0`, nullable enabled, implicit usings
+- Central Package Management (`Directory.Packages.props`) - all NuGet versions are pinned centrally
 - Temporal .NET SDK (`Temporalio.Extensions.Hosting` 1.12.0)
-- Microsoft.Extensions.AI 9.7.0 / Microsoft.Extensions.AI.OpenAI 10.4.1
+- Microsoft.Extensions.AI 10.4.1 / Microsoft.Extensions.AI.OpenAI 10.4.1
 - PdfPig 0.1.15-alpha (NuGet package ID `PdfPig`, namespace `UglyToad.PdfPig`)
 - Postgres with pgvector (`pgvector/pgvector:pg17` Docker image, `Pgvector` 0.3.2 NuGet)
-- Redis via Aspire (`Aspire.StackExchange.Redis.DistributedCaching` 13.2.0)
-- Dapper 2.1.66 for SQL queries (not EF Core)
-- .NET Aspire 13.2.0 for orchestration
+- Redis via Aspire (`Aspire.StackExchange.Redis.DistributedCaching` 13.2.1)
+- Dapper 2.1.72 for SQL queries (not EF Core)
+- .NET Aspire 13.2.1 for orchestration
 - Docker Desktop required for local dev (Temporal, Postgres, Redis run as containers)
 
 ## Temporal
@@ -146,6 +147,7 @@ Technical constraints and rejected patterns for mu-th-ur-6000.
 
 ## NuGet
 
+- **Central Package Management** - all NuGet versions are pinned in `Directory.Packages.props` at the repo root. Individual `.csproj` files use `<PackageReference Include="..." />` without `Version`. To update a package version, edit `Directory.Packages.props` — never add `Version` to a csproj.
 - The repo has a `nuget.config` with `<clear />` that removes all global sources (including private Azure DevOps feeds from other projects). Only `api.nuget.org` is configured.
 - If you get NU1301 401 errors, the `<clear />` is missing or a global config is leaking.
 

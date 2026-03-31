@@ -14,10 +14,10 @@ git clone https://github.com/screaming-in-space/mu-th-ur-6000.git
 cd mu-th-ur-6000
 
 # Add your API key (OpenAI, Anthropic, or any OpenAI-compatible endpoint)
-dotnet user-secrets --project src/Muthur.Bishop.Worker set "AI:ApiKey" "sk-..."
+dotnet user-secrets --project src/Hosts/Muthur.Bishop.Worker set "AI:ApiKey" "sk-..."
 
-# Run - starts Docker, Temporal, Postgres, Redis, Worker, and API via Aspire
-dotnet run --project src/Muthur.AppHost
+# Run - starts Docker, Temporal, Postgres, Redis, Worker, API, and Console via Aspire
+dotnet run --project src/Aspire/Muthur.AppHost
 ```
 
 Requires Docker Desktop (auto-launched if not running) and .NET 10 SDK.
@@ -25,7 +25,7 @@ Requires Docker Desktop (auto-launched if not running) and .NET 10 SDK.
 ## What happens
 
 1. Aspire starts three containers (Temporal, Postgres with pgvector, Redis) and waits for health checks
-2. The Doc Worker connects to Temporal and registers both workflows
+2. The Worker connects to Temporal and registers both workflows
 3. The API exposes endpoints for agent sessions and document access
 4. Each prompt enters the agentic loop: LLM → tool decision → tool execution → back to LLM → until done
 5. Every LLM call and every tool call is a Temporal activity checkpoint
@@ -62,12 +62,16 @@ The API port is assigned by Aspire - check the dashboard at `http://localhost:15
 ```
 Muthur.AppHost             Aspire orchestration - Temporal + Postgres + Redis containers
 Aspire.Hosting.Temporal    Temporal dev server as Aspire resource + Docker launcher
-Muthur.Api                 Minimal API - agent + document endpoints
+Muthur.Api                 Minimal API - agent + document endpoints + OpenAPI
 Muthur.Bishop.Worker       Temporal worker - AgentWorkflow + DocumentIngestionWorkflow
+Muthur.Console             Demo CLI - kicks off agent jobs via AgentRunner
+Muthur.Clients             Typed HTTP client for the API + error handling
+Muthur.Utilities           Reusable agent orchestration (AgentRunner)
 Muthur.Tools               Agent tools - PDF extraction + document storage (isolated)
 Muthur.Data                Postgres + Redis - repository, vector search, caching, migrations
 Muthur.Contracts           Shared records - no dependencies
-Muthur.ServiceDefaults     M.E.AI pipeline + Aspire defaults + Serilog
+Muthur.Telemetry           Custom ActivitySource, Meter, Activity extensions
+Muthur.ServiceDefaults     M.E.AI pipeline + Aspire defaults + Serilog + telemetry
 Muthur.Logging             Structured logging - console + OTLP, microsecond timestamps
 ```
 
@@ -121,17 +125,20 @@ Set via user secrets or environment variables on the Worker:
 
 ## Packages
 
+All versions are pinned centrally in `Directory.Packages.props`.
+
 | Package | Version | Purpose |
 |---------|---------|---------|
 | `Temporalio.Extensions.Hosting` | 1.12.0 | Temporal .NET SDK + hosted worker |
-| `Microsoft.Extensions.AI` | 9.7.0 | `IChatClient` + `IEmbeddingGenerator` |
+| `Microsoft.Extensions.AI` | 10.4.1 | `IChatClient` + `IEmbeddingGenerator` |
 | `Microsoft.Extensions.AI.OpenAI` | 10.4.1 | OpenAI-compatible provider |
 | `PdfPig` | 0.1.15-alpha | PDF text extraction |
 | `Pgvector` | 0.3.2 | pgvector type mapping for Npgsql |
-| `Dapper` | 2.1.66 | SQL queries |
-| `Aspire.Hosting.AppHost` | 13.2.0 | Aspire orchestration |
-| `Aspire.Npgsql` | 13.2.0 | Postgres via Aspire |
-| `Aspire.StackExchange.Redis.DistributedCaching` | 13.2.0 | Redis cache via Aspire |
+| `Dapper` | 2.1.72 | SQL queries |
+| `Aspire.Hosting.AppHost` | 13.2.1 | Aspire orchestration |
+| `Aspire.Npgsql` | 13.2.1 | Postgres via Aspire |
+| `Aspire.StackExchange.Redis.DistributedCaching` | 13.2.1 | Redis cache via Aspire |
+| `OpenTelemetry.Extensions.Hosting` | 1.15.1 | Custom traces + metrics |
 
 ## License
 

@@ -16,8 +16,10 @@ var cache = builder.AddRedis("muthur-cache")
     .WithLifetime(ContainerLifetime.Persistent);
 
 var api = builder.AddProject<Projects.Muthur_Api>("muthur-api")
+    .WithReference(temporal)
     .WithReference(postgres)
     .WithReference(cache)
+    .WaitFor(temporal)
     .WaitFor(postgres)
     .WaitFor(cache);
 
