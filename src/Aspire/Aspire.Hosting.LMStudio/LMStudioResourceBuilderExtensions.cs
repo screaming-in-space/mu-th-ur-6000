@@ -55,4 +55,16 @@ public static class LMStudioResourceBuilderExtensions
         builder.WithAnnotation(new ModelNameAnnotation(modelName));
         return builder;
     }
+
+    /// <summary>
+    /// Sets the embedding model name on an LM Studio resource.
+    /// Injected into the connection string as <c>EmbeddingModel=...</c>.
+    /// </summary>
+    public static IResourceBuilder<LMStudioResource> WithEmbeddingModel(
+        this IResourceBuilder<LMStudioResource> builder,
+        string embeddingModelName)
+    {
+        builder.WithAnnotation(new EmbeddingModelNameAnnotation(embeddingModelName));
+        return builder;
+    }
 }

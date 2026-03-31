@@ -14,7 +14,7 @@ public static class AiClientExtensions
     /// </summary>
     public static IHostApplicationBuilder AddAgentChatClient(this IHostApplicationBuilder builder)
     {
-        var (lmEndpoint, lmModel) = ParseLMStudioConnectionString(builder);
+        var (lmEndpoint, lmModel, _) = ParseLMStudioConnectionString(builder);
 
         var provider = builder.Configuration["AI:Provider"] ?? "openai";
         var model = lmModel ?? builder.Configuration["AI:Model"] ?? "gpt-4.1";
@@ -32,7 +32,7 @@ public static class AiClientExtensions
             return new ChatClientBuilder(inner)
                 .UseOpenTelemetry(configure: t => t.EnableSensitiveData = true)
                 .UseLogging()
-                .Build();
+                .Build(services);
         });
 
         return builder;
@@ -44,18 +44,20 @@ public static class AiClientExtensions
     /// </summary>
     public static IHostApplicationBuilder AddAgentEmbeddingGenerator(this IHostApplicationBuilder builder)
     {
-        var (lmEndpoint, _) = ParseLMStudioConnectionString(builder);
+        var (lmEndpoint, _, lmEmbeddingModel) = ParseLMStudioConnectionString(builder);
 
         var apiKey = builder.Configuration["AI:ApiKey"] ?? "lm-studio";
         var endpoint = lmEndpoint ?? builder.Configuration["AI:Endpoint"];
-        var embeddingModel = builder.Configuration["AI:EmbeddingModel"] ?? "nomic-embed-text-v1.5";
+        var embeddingModel = lmEmbeddingModel
+            ?? builder.Configuration["AI:EmbeddingModel"]
+            ?? "nomic-embed-text-v1.5";
 
         builder.Services.AddEmbeddingGenerator(services =>
         {
             var options = new OpenAIClientOptions();
 
             if (endpoint is not null)
-            { options.Endpoint = new Uri(endpoint); }
+            { options.Endpoint = NormalizeEndpoint(endpoint); }
 
             var client = new OpenAIClient(new System.ClientModel.ApiKeyCredential(apiKey), options);
             return client.GetEmbeddingClient(embeddingModel).AsIEmbeddingGenerator();
@@ -65,15 +67,16 @@ public static class AiClientExtensions
     }
 
     /// <summary>
-    /// Parses the LM Studio connection string injected by Aspire: <c>Endpoint=...;Model=...</c>
+    /// Parses the LM Studio connection string injected by Aspire:
+    /// <c>Endpoint=...;Model=...;EmbeddingModel=...</c>
     /// </summary>
-    private static (string? Endpoint, string? Model) ParseLMStudioConnectionString(
+    private static (string? Endpoint, string? Model, string? EmbeddingModel) ParseLMStudioConnectionString(
         IHostApplicationBuilder builder)
     {
         var connectionString = builder.Configuration.GetConnectionString("muthur-lmstudio");
-        if (connectionString is null) return (null, null);
+        if (connectionString is null) return (null, null, null);
 
-        string? endpoint = null, model = null;
+        string? endpoint = null, model = null, embeddingModel = null;
 
         foreach (var part in connectionString.Split(';', StringSplitOptions.RemoveEmptyEntries))
         {
@@ -85,16 +88,17 @@ public static class AiClientExtensions
 
             if (key.Equals("Endpoint", StringComparison.OrdinalIgnoreCase)) endpoint = value;
             else if (key.Equals("Model", StringComparison.OrdinalIgnoreCase)) model = value;
+            else if (key.Equals("EmbeddingModel", StringComparison.OrdinalIgnoreCase)) embeddingModel = value;
         }
 
-        return (endpoint, model);
+        return (endpoint, model, embeddingModel);
     }
 
     private static IChatClient CreateOpenAiClient(string model, string apiKey, string? endpoint)
     {
         var options = new OpenAIClientOptions();
         if (endpoint is not null)
-            options.Endpoint = new Uri(endpoint);
+            options.Endpoint = NormalizeEndpoint(endpoint);
 
         var client = new OpenAIClient(new System.ClientModel.ApiKeyCredential(apiKey), options);
         return client.GetChatClient(model).AsIChatClient();
@@ -108,5 +112,19 @@ public static class AiClientExtensions
         };
         var client = new OpenAIClient(new System.ClientModel.ApiKeyCredential(apiKey), options);
         return client.GetChatClient(model).AsIChatClient();
+    }
+
+    /// <summary>
+    /// Ensures the endpoint includes the <c>/v1</c> path that the OpenAI .NET SDK v2 expects.
+    /// The SDK appends <c>/chat/completions</c> directly to the endpoint — without <c>/v1</c>,
+    /// LM Studio receives <c>POST /chat/completions</c> and rejects it.
+    /// </summary>
+    private static Uri NormalizeEndpoint(string endpoint)
+    {
+        var trimmed = endpoint.TrimEnd('/');
+        if (!trimmed.EndsWith("/v1", StringComparison.OrdinalIgnoreCase))
+            trimmed += "/v1";
+
+        return new Uri(trimmed);
     }
 }

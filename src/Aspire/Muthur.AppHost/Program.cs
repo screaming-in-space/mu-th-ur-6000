@@ -7,7 +7,8 @@ await builder.EnsureDockerAsync();
 var temporal = builder.AddTemporalDevServer("muthur-temporal-dev");
 
 var lmstudio = builder.AddLMStudio("muthur-lmstudio")
-    .WithModel("nemotron-3-nano-4b");
+    .WithModel("unsloth/nvidia-nemotron-3-nano-4b")
+    .WithEmbeddingModel("nomic-embed-text-v1.5");
 
 var postgres = builder.AddPostgres("muthur-postgres")
     .WithImage("pgvector/pgvector")
