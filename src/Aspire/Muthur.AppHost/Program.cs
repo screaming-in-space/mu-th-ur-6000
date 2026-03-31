@@ -40,6 +40,7 @@ var worker = builder.AddProject<Projects.Muthur_Bishop_Worker>("muthur-bishop-wo
 
 builder.AddProject<Projects.Muthur_Console>("muthur-console")
     .WithReference(api)
-    .WaitFor(api);
+    .WaitFor(api)
+    .WaitFor(worker);
 
 await builder.Build().RunAsync();

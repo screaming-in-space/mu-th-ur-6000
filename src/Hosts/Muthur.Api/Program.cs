@@ -9,13 +9,12 @@ builder.AddMuthurData("muthur-db", "muthur-cache");
 builder.AddAgentEmbeddingGenerator();
 builder.Services.AddOpenApi();
 
-builder.Services.AddTemporalClient(options =>
-{
-    options.TargetHost = builder.Configuration.GetConnectionString("muthur-temporal-dev")
-        ?? builder.Configuration["Temporal:Address"]
-        ?? "localhost:7233";
-    options.Namespace = builder.Configuration["Temporal:Namespace"] ?? "default";
-});
+var temporalHost = builder.Configuration.GetConnectionString("muthur-temporal-dev")
+    ?? builder.Configuration["Temporal:Address"]
+    ?? "localhost:7233";
+var temporalNamespace = builder.Configuration["Temporal:Namespace"] ?? "default";
+
+builder.Services.AddTemporalClient(temporalHost, temporalNamespace);
 
 var app = builder.Build();
 

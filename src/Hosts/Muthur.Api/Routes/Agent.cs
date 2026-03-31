@@ -82,7 +82,7 @@ public static class AgentRoutes
         try
         {
             await handle.SignalAsync(
-                "SendPromptAsync",
+                "SendPrompt",
                 [new PromptSignal(request.Content, request.SystemPrompt)]);
 
             return Results.Accepted();

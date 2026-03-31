@@ -40,6 +40,14 @@ Technical constraints and rejected patterns for mu-th-ur-6000.
 - Don't use `with` expressions inside `Workflow.CreateContinueAsNewException` lambdas - they're expression trees. Create local variables first.
 - Don't block the agent conversation on child workflow completion. Return the response first, then fork the vectorize pipeline with `Abandon`.
 
+## Temporal Troubleshooting
+
+- **Signal name mismatch is silent.** The .NET SDK strips the `Async` suffix from `[WorkflowSignal]` method names. `SendPromptAsync` registers as `"SendPrompt"`. If you call `handle.SignalAsync("SendPromptAsync", ...)`, the signal is delivered, accepted by the server, visible in the event history — and silently dropped. No error, no log. The workflow sits on `WaitConditionAsync` forever. Always use the stripped name: `"SendPrompt"`, not `"SendPromptAsync"`.
+- **Same applies to queries.** `GetState` not `GetStateAsync` (though our query method isn't async, so it doesn't have the suffix — but be aware of the convention).
+- **Put signal/query names in constants.** `AgentConstants` already owns the task queue name. Signal and query names should live there too. Type them once, reference everywhere.
+- **`BackgroundServiceExceptionBehavior.Ignore`** means hosted services (including migrations and the Temporal worker) won't crash the host on failure. This is correct — but it means errors are only visible in logs. If the Worker starts but never processes workflows, check logs for connection errors.
+- **`AddTemporalClient` must use the two-arg overload** `(connectionString, namespace)` — not the options-callback overload. The hosted worker expects the client to be fully configured via this path.
+
 ## M.E.AI / IChatClient / VectorData
 
 ### Priority order for AI abstractions
@@ -144,6 +152,12 @@ Technical constraints and rejected patterns for mu-th-ur-6000.
 
 - Don't put tool handlers in the Worker project. The Worker owns Temporal activities; Tools owns handlers.
 - Don't change `AgentWorkflow` or `ToolActivities` when adding a new tool. Only touch `ToolRegistry`.
+
+## Debugging
+
+- **Decompose first, guess never.** When something isn't working end-to-end, don't keep restarting the full system hoping for different output. Write the smallest possible integration test that isolates the suspect layer. The test that finds the bug in 2 seconds is always better than the 47th AppHost restart.
+- **The integration test harness exists — use it.** `Muthur.Integration.Tests` has a shared Aspire fixture with live Temporal, Postgres, Redis, API, and Worker. Write a focused test against the specific layer that's failing: Temporal signals, repo queries, API routes, LLM calls. Run it. Read the assertion failure. Fix the code.
+- **Strip the stack.** If the workflow isn't processing, don't debug through Console → API → Temporal → Worker. Connect a `TemporalClient` directly, start a workflow, signal it, query it. If that works, the problem is upstream. If it doesn't, the problem is in the workflow. Binary search, not full-stack prayer.
 
 ## NuGet
 

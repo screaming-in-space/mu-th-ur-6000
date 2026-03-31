@@ -25,7 +25,15 @@ builder.AddAgentEmbeddingGenerator();
 builder.Services.AddSingleton<DocumentStoreHandler>();
 builder.Services.AddSingleton<ToolRegistry>();
 
-// Temporal worker - agent workflow + ingestion child workflow + all activities.
+var temporalHost = builder.Configuration.GetConnectionString("muthur-temporal-dev")
+    ?? builder.Configuration["Temporal:Address"]
+    ?? "localhost:7233";
+var temporalNamespace = builder.Configuration["Temporal:Namespace"] ?? "default";
+
+// Temporal client — singleton, shared by worker and any direct client usage.
+builder.Services.AddTemporalClient(temporalHost, temporalNamespace);
+
+// Temporal worker — uses the DI'd ITemporalClient above.
 builder.Services
     .AddHostedTemporalWorker(AgentConstants.TaskQueue)
     .AddWorkflow<AgentWorkflow>()
@@ -34,21 +42,11 @@ builder.Services
     .AddScopedActivities<ToolActivities>()
     .AddScopedActivities<IngestionActivities>();
 
-builder.Services.AddTemporalClient(options =>
-{
-    options.TargetHost = builder.Configuration.GetConnectionString("muthur-temporal-dev")
-        ?? builder.Configuration["Temporal:Address"]
-        ?? "localhost:7233";
-    options.Namespace = builder.Configuration["Temporal:Namespace"] ?? "default";
-});
-
 var host = builder.Build();
 
 var logger = host.Services.GetRequiredService<ILoggerFactory>().CreateLogger("Muthur.Bishop.Worker");
-var targetHost = builder.Configuration.GetConnectionString("muthur-temporal-dev")
-    ?? builder.Configuration["Temporal:Address"]
-    ?? "localhost:7233";
-logger.LogInformation("Bishop Worker starting — Temporal target: {TargetHost}, TaskQueue: {TaskQueue}",
-    targetHost, AgentConstants.TaskQueue);
+var lmConnectionString = builder.Configuration.GetConnectionString("muthur-lmstudio") ?? "(not set)";
+logger.LogInformation("Bishop Worker starting — Temporal: {TargetHost}/{Namespace}, TaskQueue: {TaskQueue}, LMStudio: {LMStudio}",
+    temporalHost, temporalNamespace, AgentConstants.TaskQueue, lmConnectionString);
 
 await host.RunAsync();
