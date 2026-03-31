@@ -11,9 +11,11 @@ namespace Muthur.Tools.Handlers;
 /// </summary>
 public static class PdfHandler
 {
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+
     public static async Task<string> ExtractTextAsync(string arguments)
     {
-        var args = JsonSerializer.Deserialize<PdfExtractArgs>(arguments)
+        var args = JsonSerializer.Deserialize<PdfExtractArgs>(arguments, JsonOptions)
             ?? throw new ArgumentException("Invalid PDF extraction arguments");
 
         if (!File.Exists(args.FilePath))

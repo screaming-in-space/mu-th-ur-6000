@@ -34,12 +34,13 @@ public sealed class IngestionPipelineTests(MuthurFixture platform)
 
         await repo.StoreChunksAsync(docId, chunks, [embeddingA, embeddingB]);
 
-        // Search with embedding close to A — chunk 0 should rank higher.
-        var results = await repo.SearchSimilarAsync(embeddingA, limit: 2);
+        // Search with embedding close to A — filter to this document's chunks.
+        var results = await repo.SearchSimilarAsync(embeddingA, limit: 10);
+        var docResults = results.Where(r => r.DocumentId == docId).ToList();
 
-        Assert.NotEmpty(results);
-        Assert.Equal("Neural networks are used for deep learning.", results[0].ChunkText);
-        Assert.True(results[0].Score > results[1].Score,
+        Assert.Equal(2, docResults.Count);
+        Assert.Equal("Neural networks are used for deep learning.", docResults[0].ChunkText);
+        Assert.True(docResults[0].Score > docResults[1].Score,
             "Chunk matching the query embedding should rank first");
     }
 

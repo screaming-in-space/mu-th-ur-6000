@@ -10,9 +10,11 @@ namespace Muthur.Tools.Handlers;
 /// </summary>
 public sealed class DocumentStoreHandler(IDocumentRepository repository)
 {
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+
     public async Task<string> StoreAsync(string arguments)
     {
-        var args = JsonSerializer.Deserialize<StoreDocumentArgs>(arguments)
+        var args = JsonSerializer.Deserialize<StoreDocumentArgs>(arguments, JsonOptions)
             ?? throw new ArgumentException("Invalid store_document arguments");
 
         var id = await repository.StoreDocumentAsync(

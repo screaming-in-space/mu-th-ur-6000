@@ -54,14 +54,14 @@ public sealed class MigrationServiceTests(MuthurFixture platform)
     {
         await using var conn = await platform.DataSource.OpenConnectionAsync();
 
-        // atttypmod for vector(N) is N + 4.
         var typmod = await conn.ExecuteScalarAsync<int>("""
             SELECT atttypmod FROM pg_attribute
             WHERE attrelid = 'document_chunks'::regclass
               AND attname  = 'embedding'
             """);
 
-        Assert.Equal(768 + 4, typmod);
+        // pgvector stores the dimension count directly in atttypmod.
+        Assert.Equal(768, typmod);
     }
 
     [Fact]
