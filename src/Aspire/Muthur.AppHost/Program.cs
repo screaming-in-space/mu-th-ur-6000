@@ -1,3 +1,5 @@
+using Aspire.Hosting.Temporal;
+
 var builder = DistributedApplication.CreateBuilder(args);
 
 await builder.EnsureDockerAsync();

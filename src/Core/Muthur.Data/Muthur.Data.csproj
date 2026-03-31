@@ -5,11 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Aspire.Npgsql" Version="13.2.0" />
-    <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.2.0" />
-    <PackageReference Include="Dapper" Version="2.1.66" />
-    <PackageReference Include="Pgvector" Version="0.3.2" />
-    <PackageReference Include="Pgvector.Dapper" Version="0.3.1" />
+    <PackageReference Include="Aspire.Npgsql" />
+    <PackageReference Include="Aspire.StackExchange.Redis.DistributedCaching" />
+    <PackageReference Include="Dapper" />
+    <PackageReference Include="Pgvector" />
+    <PackageReference Include="Pgvector.Dapper" />
   </ItemGroup>
 
   <ItemGroup>

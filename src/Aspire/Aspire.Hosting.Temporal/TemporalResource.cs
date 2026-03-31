@@ -1,6 +1,6 @@
 using Aspire.Hosting.ApplicationModel;
 
-namespace Aspire.Hosting;
+namespace Aspire.Hosting.Temporal;
 
 /// <summary>
 /// Represents a Temporal dev server container resource managed by Aspire.

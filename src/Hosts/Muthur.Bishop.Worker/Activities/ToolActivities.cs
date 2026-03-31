@@ -1,3 +1,4 @@
+using Muthur.Telemetry;
 using Muthur.Tools;
 using Temporalio.Activities;
 
@@ -14,6 +15,9 @@ public class ToolActivities(ToolRegistry toolRegistry)
     {
         var handler = toolRegistry.GetHandler(toolName)
             ?? throw new InvalidOperationException($"Unknown tool: {toolName}");
+
+        MuthurMetrics.ToolExecutions.Add(1,
+            new KeyValuePair<string, object?>("tool.name", toolName));
 
         return await handler(arguments);
     }

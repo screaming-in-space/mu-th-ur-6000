@@ -1,7 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 
-namespace Aspire.Hosting;
+namespace Aspire.Hosting.Temporal;
 
 public static class DockerDesktopExtensions
 {

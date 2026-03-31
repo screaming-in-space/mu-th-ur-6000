@@ -44,8 +44,8 @@ public class IngestionActivities(
             }
 
             chunks.Add(new TextChunk(index++, chunk.Trim()));
-            position = end - overlapChars;
-            if (position <= chunks[^1].Index) position = end; // prevent infinite loop
+            var nextPosition = end - overlapChars;
+            position = nextPosition <= position ? end : nextPosition; // prevent infinite loop
         }
 
         return Task.FromResult(chunks.ToArray());

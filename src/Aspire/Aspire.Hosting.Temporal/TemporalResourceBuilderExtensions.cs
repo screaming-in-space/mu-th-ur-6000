@@ -1,6 +1,6 @@
 using Aspire.Hosting.ApplicationModel;
 
-namespace Aspire.Hosting;
+namespace Aspire.Hosting.Temporal;
 
 public static class TemporalResourceBuilderExtensions
 {

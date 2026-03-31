@@ -1,6 +1,8 @@
 using System.Text.Json;
+using Microsoft.Extensions.Logging;
 using Muthur.Bishop.Worker.Activities;
 using Muthur.Contracts;
+using Muthur.Telemetry;
 using Temporalio.Workflows;
 
 namespace Muthur.Bishop.Worker.Workflows;
@@ -123,14 +125,16 @@ public class AgentWorkflow
     /// </summary>
     private static async Task TryStartIngestionAsync(string toolArguments, string toolResult)
     {
+        StoreDocumentResult? parsedResult = null;
+
         try
         {
             var args = JsonSerializer.Deserialize<StoreDocumentArgs>(toolArguments);
-            var result = JsonSerializer.Deserialize<StoreDocumentResult>(toolResult);
-            if (args is null || result?.DocumentId is null) return;
+            parsedResult = JsonSerializer.Deserialize<StoreDocumentResult>(toolResult);
+            if (args is null || parsedResult?.DocumentId is null) return;
 
             var input = new DocumentIngestionInput(
-                result.DocumentId.Value,
+                parsedResult.DocumentId.Value,
                 args.SourcePath ?? "",
                 args.Text ?? "",
                 args.PageCount,
@@ -140,13 +144,16 @@ public class AgentWorkflow
                 (DocumentIngestionWorkflow wf) => wf.RunAsync(input),
                 new ChildWorkflowOptions
                 {
-                    Id = $"ingest-{result.DocumentId}",
+                    Id = $"ingest-{parsedResult.DocumentId}",
                     ParentClosePolicy = Temporalio.Workflows.ParentClosePolicy.Abandon
                 });
+
+            MuthurMetrics.DocumentsIngested.Add(1);
         }
-        catch
+        catch (Exception ex)
         {
             // Ingestion failure doesn't break the agent conversation.
+            Workflow.Logger.LogWarning(ex, "Failed to start ingestion for document {DocumentId}", parsedResult?.DocumentId);
         }
     }
 
