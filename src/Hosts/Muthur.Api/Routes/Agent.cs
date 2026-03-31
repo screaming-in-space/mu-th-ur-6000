@@ -65,7 +65,3 @@ public static class AgentRoutes
         .Produces<AgentState>();
     }
 }
-
-public sealed record CreateSessionRequest(string? SystemPrompt = null);
-public sealed record SendPromptRequest(string Content, string? SystemPrompt = null);
-public sealed record CreateSessionResponse(string AgentId, string WorkflowId);

@@ -27,4 +27,8 @@ var worker = builder.AddProject<Projects.Muthur_Bishop_Worker>("muthur-bishop-wo
     .WaitFor(postgres)
     .WaitFor(cache);
 
+builder.AddProject<Projects.Muthur_Console>("muthur-console")
+    .WithReference(api)
+    .WaitFor(api);
+
 await builder.Build().RunAsync();

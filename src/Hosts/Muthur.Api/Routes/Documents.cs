@@ -60,5 +60,3 @@ public static class DocumentRoutes
         .Produces<IReadOnlyList<SimilarChunk>>();
     }
 }
-
-public sealed record DocumentContentResponse(string Content);

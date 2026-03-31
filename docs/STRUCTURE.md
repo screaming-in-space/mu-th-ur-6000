@@ -13,14 +13,19 @@ mu-th-ur-6000/
 │   ├── Aspire/                     # Infrastructure & orchestration
 │   │   ├── Aspire.Hosting.Temporal/  # Aspire extension for Temporal container
 │   │   └── Muthur.AppHost/          # Aspire orchestration host
+│   ├── Apps/                       # User-facing applications
+│   │   └── Muthur.Console/           # Demo CLI - kicks off agent jobs
 │   ├── Core/                       # Shared libraries - no host dependencies
+│   │   ├── Muthur.Clients/           # Typed HTTP client for the Muthur API
 │   │   ├── Muthur.Contracts/         # Shared types - no dependencies
 │   │   ├── Muthur.Data/              # Postgres + Redis - document storage + vector search
 │   │   ├── Muthur.Logging/           # Serilog structured logging
-│   │   ├── Muthur.ServiceDefaults/   # Shared DI, M.E.AI pipeline
-│   │   └── Muthur.Tools/             # Agent tools - PDF extraction, document storage
+│   │   ├── Muthur.ServiceDefaults/   # Shared DI, M.E.AI pipeline, telemetry
+│   │   ├── Muthur.Telemetry/         # Custom ActivitySource, Meter, Activity extensions
+│   │   ├── Muthur.Tools/             # Agent tools - PDF extraction, document storage
+│   │   └── Muthur.Utilities/         # Reusable agent orchestration (AgentRunner)
 │   └── Hosts/                      # Runnable services
-│       ├── Muthur.Api/               # Minimal API - HTTP endpoints
+│       ├── Muthur.Api/               # Minimal API - HTTP endpoints + OpenAPI
 │       └── Muthur.Bishop.Worker/     # Temporal worker - workflows + activities
 ├── samples/                        # Sample PDFs for testing
 ├── .claude/
@@ -42,7 +47,7 @@ Aspire orchestration. Starts Temporal, Postgres, and Redis containers, then the 
 |------|---------|
 | `Program.cs` | `EnsureDockerAsync()`, resource wiring, `.WaitFor()` chains |
 
-**Depends on:** Aspire.Hosting.Temporal, Aspire.Hosting.PostgreSQL, Aspire.Hosting.Redis, Muthur.Api (project ref), Muthur.Bishop.Worker (project ref)
+**Depends on:** Aspire.Hosting.Temporal, Aspire.Hosting.PostgreSQL, Aspire.Hosting.Redis, Muthur.Api (project ref), Muthur.Bishop.Worker (project ref), Muthur.Console (project ref)
 
 ### Aspire.Hosting.Temporal
 
@@ -83,15 +88,39 @@ Temporal worker. Hosts the agent workflow, ingestion child workflow, and all act
 
 **Depends on:** Muthur.Contracts, Muthur.Data, Muthur.ServiceDefaults, Muthur.Tools, Temporalio.Extensions.Hosting
 
+### Muthur.Console
+
+Thin demo CLI host. Configures DI and delegates to `AgentRunner`.
+
+| File | Purpose |
+|------|---------|
+| `Program.cs` | Host builder, job config, result display |
+
+**Depends on:** Muthur.Utilities, Muthur.ServiceDefaults, Microsoft.Extensions.Hosting
+
+### Muthur.Clients
+
+Typed HTTP client for the Muthur API. Error handling, RFC 7807 parsing, DI registration.
+
+| File | Purpose |
+|------|---------|
+| `MuthurApiClient.cs` | Typed HttpClient - sessions, prompts, state, documents, search |
+| `MuthurApiException.cs` | Exception with RFC 7807 body parsing, factory method |
+| `MuthurErrorHandler.cs` | DelegatingHandler - 401/403 fail-fast |
+| `MuthurClientExtensions.cs` | DI registration with SocketsHttpHandler connection pooling |
+
+**Depends on:** Muthur.Contracts, Microsoft.Extensions.Http
+
 ### Muthur.Contracts
 
-Shared types. Zero dependencies. Referenced by Api, Worker, Data, and Tools.
+Shared types. Zero dependencies. Referenced by Api, Worker, Data, Tools, and Clients.
 
 | File | Purpose |
 |------|---------|
 | `AgentConstants.cs` | Task queue name, role strings, turn limit, workflow ID factory |
 | `AgentInput.cs` | `AgentWorkflowInput`, `LlmActivityInput/Output`, `ToolCallRequest/Result`, `ConversationMessage` |
 | `AgentSignals.cs` | `PromptSignal`, `AgentState` |
+| `ApiModels.cs` | `CreateSessionRequest/Response`, `SendPromptRequest`, `DocumentContentResponse` |
 | `PdfExtractionResult.cs` | `PdfExtractionResult(Text, PageCount, Metadata)` |
 | `DocumentModels.cs` | `DocumentRecord`, `DocumentSummary`, `DocumentChunkRecord`, `SimilarChunk` |
 | `DocumentIngestionInput.cs` | `DocumentIngestionInput`, `TextChunk` |
@@ -124,16 +153,40 @@ Agent tools. Isolated from the Worker for independent testability.
 
 **Depends on:** Muthur.Contracts, Muthur.Data, Microsoft.Extensions.AI, PdfPig
 
-### Muthur.ServiceDefaults
+### Muthur.Utilities
 
-Shared DI extensions. Owns the M.E.AI pipeline and Aspire service defaults.
+Reusable agent orchestration. Decoupled from hosting — usable from console apps, tests, or background services.
 
 | File | Purpose |
 |------|---------|
-| `Extensions.cs` | `AddServiceDefaults()` - Serilog, OpenTelemetry, health checks, service discovery |
+| `AgentRunner.cs` | Create session → send prompt → poll until done |
+| `UtilityExtensions.cs` | `AddAgentRunner()` DI registration |
+
+**Depends on:** Muthur.Clients
+
+### Muthur.Telemetry
+
+Custom OpenTelemetry instrumentation. ActivitySource, Meter, fluent Activity extensions.
+
+| File | Purpose |
+|------|---------|
+| `MuthurTrace.cs` | Static `ActivitySource("Muthur")` with `StartSpan()` helper |
+| `MuthurMetrics.cs` | Static `Meter("Muthur")` - sessions, tool executions, documents, LLM duration |
+| `ActivityExtensions.cs` | Null-safe fluent extensions: `WithTag`, `WithBaggage`, `RecordError`, `SetSuccess` |
+| `TelemetryExtensions.cs` | `AddMuthurTelemetry()` - registers sources, service resource metadata |
+
+**Depends on:** OpenTelemetry.Extensions.Hosting
+
+### Muthur.ServiceDefaults
+
+Shared DI extensions. Owns the M.E.AI pipeline, Aspire service defaults, and telemetry wiring.
+
+| File | Purpose |
+|------|---------|
+| `Extensions.cs` | `AddServiceDefaults()` - Serilog, OpenTelemetry, telemetry, health checks, service discovery |
 | `AiClientExtensions.cs` | `AddAgentChatClient()` + `AddAgentEmbeddingGenerator()` |
 
-**Depends on:** Muthur.Logging, Microsoft.Extensions.AI, Microsoft.Extensions.AI.OpenAI
+**Depends on:** Muthur.Logging, Muthur.Telemetry, Microsoft.Extensions.AI, Microsoft.Extensions.AI.OpenAI
 
 ### Muthur.Logging
 
@@ -152,7 +205,17 @@ Aspire/
   AppHost
   ├── Aspire.Hosting.Temporal  (IsAspireProjectResource=false)
   ├── Hosts/Api
-  └── Hosts/Bishop.Worker
+  ├── Hosts/Bishop.Worker
+  └── Apps/Console
+
+Apps/
+  Console
+  ├── Core/Utilities
+  │   └── Core/Clients
+  │       └── Core/Contracts
+  └── Core/ServiceDefaults
+      ├── Core/Logging
+      └── Core/Telemetry
 
 Hosts/
   Api
@@ -160,14 +223,16 @@ Hosts/
   ├── Core/Data
   │   └── Core/Contracts
   └── Core/ServiceDefaults
-      └── Core/Logging
+      ├── Core/Logging
+      └── Core/Telemetry
 
   Bishop.Worker
   ├── Core/Contracts
   ├── Core/Data
   │   └── Core/Contracts
   ├── Core/ServiceDefaults
-  │   └── Core/Logging
+  │   ├── Core/Logging
+  │   └── Core/Telemetry
   └── Core/Tools
       ├── Core/Contracts
       └── Core/Data
@@ -176,6 +241,7 @@ Hosts/
 Api and Worker (both in `Hosts/`) share everything in `Core/` but never reference each other.
 The Api talks to workflows via untyped Temporal handles (string-based names).
 Tools is isolated from the Worker - the Worker owns Temporal activities, Tools owns handlers.
+Console talks to the Api via `Muthur.Clients` - never references Hosts or Aspire directly.
 
 ## Data Flow
 
