@@ -1,8 +1,6 @@
-using Microsoft.Extensions.Configuration;
 using Muthur.Api.Routes;
 using Muthur.Data;
 using Muthur.ServiceDefaults;
-using Temporalio.Client;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -26,4 +24,4 @@ app.MapOpenApi();
 app.MapAgentRoutes();
 app.MapDocumentRoutes();
 
-app.Run();
+await app.RunAsync();

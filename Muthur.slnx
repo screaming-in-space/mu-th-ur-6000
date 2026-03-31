@@ -27,6 +27,7 @@
   <Folder Name="/src/Aspire/">
     <Project Path="src/Aspire/Aspire.Hosting.Temporal/Aspire.Hosting.Temporal.csproj" />
     <Project Path="src/Aspire/Muthur.AppHost/Muthur.AppHost.csproj" />
+    <Project Path="src/Aspire/Muthur.Integration.Tests/Muthur.Integration.Tests.csproj" />
   </Folder>
   <Folder Name="/src/Apps/">
     <Project Path="src/Apps/Muthur.Console/Muthur.Console.csproj" />

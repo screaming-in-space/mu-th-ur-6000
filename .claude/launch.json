@@ -4,8 +4,13 @@
     {
       "name": "aspire",
       "runtimeExecutable": "dotnet",
-      "runtimeArgs": ["run", "--project", "src/Muthur.AppHost"],
+      "runtimeArgs": ["run", "--project", "src/Aspire/Muthur.AppHost"],
       "port": 15137
+    },
+    {
+      "name": "tests",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["test", "src/Aspire/Muthur.Integration.Tests", "--logger", "console;verbosity=detailed"]
     }
   ]
 }

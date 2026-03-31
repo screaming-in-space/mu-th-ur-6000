@@ -48,8 +48,9 @@ public static class AiClientExtensions
         builder.Services.AddEmbeddingGenerator(services =>
         {
             var options = new OpenAIClientOptions();
+
             if (endpoint is not null)
-                options.Endpoint = new Uri(endpoint);
+            { options.Endpoint = new Uri(endpoint); }
 
             var client = new OpenAIClient(new System.ClientModel.ApiKeyCredential(apiKey), options);
             return client.GetEmbeddingClient(embeddingModel).AsIEmbeddingGenerator();

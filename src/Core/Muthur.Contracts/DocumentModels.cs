@@ -7,7 +7,7 @@ public sealed record DocumentRecord(
     string SourcePath,
     int PageCount,
     Dictionary<string, string> Metadata,
-    DateTimeOffset CreatedAt);
+    DateTime CreatedAt);
 
 /// <summary>Lightweight summary for list endpoints.</summary>
 public sealed record DocumentSummary(
@@ -15,7 +15,7 @@ public sealed record DocumentSummary(
     string? Title,
     string SourcePath,
     int PageCount,
-    DateTimeOffset CreatedAt);
+    DateTime CreatedAt);
 
 /// <summary>A chunk of document text without its embedding.</summary>
 public sealed record DocumentChunkRecord(

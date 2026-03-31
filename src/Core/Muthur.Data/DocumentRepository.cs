@@ -120,10 +120,10 @@ public sealed class DocumentRepository(NpgsqlDataSource dataSource) : IDocumentR
 
     // Dapper row types - snake_case matches Postgres column names.
     private sealed record DocumentRow(Guid Id, string? Title, string Source_Path,
-        int Page_Count, string Metadata, DateTimeOffset Created_At);
+        int Page_Count, string Metadata, DateTime Created_At);
 
     private sealed record DocumentSummaryRow(Guid Id, string? Title, string Source_Path,
-        int Page_Count, DateTimeOffset Created_At);
+        int Page_Count, DateTime Created_At);
 
     private sealed record SimilarChunkRow(string Chunk_Text, Guid Document_Id,
         string? Document_Title, double Score);
