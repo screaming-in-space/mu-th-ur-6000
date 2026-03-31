@@ -7,7 +7,8 @@ public static class AgentRoutes
 {
     public static void MapAgentRoutes(this WebApplication app)
     {
-        var group = app.MapGroup("/v1/agent");
+        var group = app.MapGroup("/v1/agent")
+            .WithTags("Agent");
 
         // Start a new agent session.
         group.MapPost("/sessions", async (
@@ -23,8 +24,12 @@ public static class AgentRoutes
                 [new AgentWorkflowInput(agentId, request.SystemPrompt)],
                 new WorkflowOptions(workflowId, AgentConstants.TaskQueue));
 
-            return Results.Ok(new { AgentId = agentId, WorkflowId = workflowId });
-        });
+            return Results.Ok(new CreateSessionResponse(agentId, workflowId));
+        })
+        .WithName("CreateSession")
+        .WithDescription("Start a new durable agent session backed by a Temporal workflow.")
+        .Produces<CreateSessionResponse>()
+        .ProducesValidationProblem();
 
         // Send a prompt to an existing agent.
         group.MapPost("/sessions/{agentId}/prompt", async (
@@ -39,7 +44,11 @@ public static class AgentRoutes
                 [new PromptSignal(request.Content, request.SystemPrompt)]);
 
             return Results.Accepted();
-        });
+        })
+        .WithName("SendPrompt")
+        .WithDescription("Send a prompt signal to a running agent session.")
+        .Produces(StatusCodes.Status202Accepted)
+        .ProducesValidationProblem();
 
         // Query agent state.
         group.MapGet("/sessions/{agentId}", async (
@@ -50,9 +59,13 @@ public static class AgentRoutes
 
             var state = await handle.QueryAsync<AgentState>("GetState", []);
             return Results.Ok(state);
-        });
+        })
+        .WithName("GetAgentState")
+        .WithDescription("Query the current state of an agent session.")
+        .Produces<AgentState>();
     }
 }
 
 public sealed record CreateSessionRequest(string? SystemPrompt = null);
 public sealed record SendPromptRequest(string Content, string? SystemPrompt = null);
+public sealed record CreateSessionResponse(string AgentId, string WorkflowId);

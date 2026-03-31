@@ -9,6 +9,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.AddServiceDefaults();
 builder.AddMuthurData("muthur-db", "muthur-cache");
 builder.AddAgentEmbeddingGenerator();
+builder.Services.AddOpenApi();
 
 builder.Services.AddTemporalClient(options =>
 {
@@ -21,6 +22,7 @@ builder.Services.AddTemporalClient(options =>
 var app = builder.Build();
 
 app.MapDefaultEndpoints();
+app.MapOpenApi();
 app.MapAgentRoutes();
 app.MapDocumentRoutes();
 

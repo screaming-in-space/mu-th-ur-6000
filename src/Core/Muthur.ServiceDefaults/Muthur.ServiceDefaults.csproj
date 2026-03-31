@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Muthur.Logging\Muthur.Logging.csproj" />
+    <ProjectReference Include="..\Muthur.Telemetry\Muthur.Telemetry.csproj" />
   </ItemGroup>
 
 </Project>
