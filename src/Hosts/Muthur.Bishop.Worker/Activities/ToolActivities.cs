@@ -14,6 +14,7 @@ public class ToolActivities(ILogger<ToolActivities> logger, ToolRegistry toolReg
     [Activity]
     public async Task<string> ExecuteToolAsync(string toolName, string arguments)
     {
+        var cancellationToken = ActivityExecutionContext.Current.CancellationToken;
         logger.LogInformation("Executing tool: {ToolName}", toolName);
 
         var handler = toolRegistry.GetHandler(toolName)
@@ -22,7 +23,7 @@ public class ToolActivities(ILogger<ToolActivities> logger, ToolRegistry toolReg
         MuthurMetrics.ToolExecutions.Add(1,
             new KeyValuePair<string, object?>("tool.name", toolName));
 
-        var result = await handler(arguments);
+        var result = await handler(arguments, cancellationToken);
 
         logger.LogInformation("Tool {ToolName} completed — {ResultLength} chars", toolName, result.Length);
         return result;

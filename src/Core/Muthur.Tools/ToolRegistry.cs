@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
+using Microsoft.Extensions.Logging;
 using Muthur.Tools.Handlers;
 
 namespace Muthur.Tools;
@@ -11,21 +12,22 @@ namespace Muthur.Tools;
 /// </summary>
 public sealed class ToolRegistry
 {
-    private readonly Dictionary<string, Func<string, Task<string>>> _handlers = [];
+    private readonly Dictionary<string, Func<string, CancellationToken, Task<string>>> _handlers = [];
     private readonly List<AITool> _tools = [];
 
-    public ToolRegistry(DocumentStoreHandler documentStoreHandler)
+    public ToolRegistry(ILogger<ToolRegistry> logger, DocumentStoreHandler documentStoreHandler)
     {
         // PDF text extraction.
         _handlers["extract_pdf_text"] = PdfHandler.ExtractTextAsync;
         _tools.Add(AIFunctionFactory.Create(
             [Description("Extract text content and metadata from a PDF file. Returns the full text, page count, and document metadata.")]
             async (
-                [Description("Absolute path to the PDF file")] string filePath
+                [Description("Absolute path to the PDF file")] string filePath,
+                CancellationToken cancellationToken
             ) =>
             {
                 var args = JsonSerializer.Serialize(new { FilePath = filePath });
-                return await PdfHandler.ExtractTextAsync(args);
+                return await PdfHandler.ExtractTextAsync(args, cancellationToken).ConfigureAwait(false);
             },
             "extract_pdf_text"));
 
@@ -40,7 +42,8 @@ public sealed class ToolRegistry
                 [Description("Original file path")] string sourcePath,
                 [Description("Full extracted text content")] string text,
                 [Description("Number of pages in the document")] int pageCount,
-                [Description("Document metadata as JSON string")] string? metadata
+                [Description("Document metadata as JSON string")] string? metadata,
+                CancellationToken cancellationToken
             ) =>
             {
                 var args = JsonSerializer.Serialize(new
@@ -53,13 +56,13 @@ public sealed class ToolRegistry
                         ? new Dictionary<string, string>()
                         : JsonSerializer.Deserialize<Dictionary<string, string>>(metadata)
                 });
-                return await documentStoreHandler.StoreAsync(args);
+                return await documentStoreHandler.StoreAsync(args, cancellationToken).ConfigureAwait(false);
             },
             "store_document"));
     }
 
     public IReadOnlyList<AITool> GetTools() => _tools;
 
-    public Func<string, Task<string>>? GetHandler(string name) =>
+    public Func<string, CancellationToken, Task<string>>? GetHandler(string name) =>
         _handlers.GetValueOrDefault(name);
 }

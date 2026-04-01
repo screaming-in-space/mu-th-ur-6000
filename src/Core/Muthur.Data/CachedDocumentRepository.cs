@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Distributed;
+using Microsoft.Extensions.Logging;
 using Muthur.Contracts;
 
 namespace Muthur.Data;
@@ -7,8 +8,10 @@ namespace Muthur.Data;
 /// <summary>
 /// Decorator over <see cref="IDocumentRepository"/> that caches reads in Redis.
 /// Writes pass through to the inner repository and invalidate the cache.
+/// Cache operations are best-effort — failures are logged but never block.
 /// </summary>
 public sealed class CachedDocumentRepository(
+    ILogger<CachedDocumentRepository> logger,
     DocumentRepository inner,
     IDistributedCache cache) : IDocumentRepository
 {
@@ -20,8 +23,18 @@ public sealed class CachedDocumentRepository(
     public async Task<Guid> StoreDocumentAsync(string? title, string sourcePath, string content,
         int pageCount, Dictionary<string, string> metadata, CancellationToken ct = default)
     {
-        var id = await inner.StoreDocumentAsync(title, sourcePath, content, pageCount, metadata, ct);
-        await cache.RemoveAsync("docs:list", ct);
+        var id = await inner.StoreDocumentAsync(title, sourcePath, content, pageCount, metadata, ct)
+            .ConfigureAwait(false);
+
+        try
+        {
+            await cache.RemoveAsync("docs:list", ct).ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Cache invalidation failed for key {Key}", "docs:list");
+        }
+
         return id;
     }
 
@@ -32,13 +45,35 @@ public sealed class CachedDocumentRepository(
     public async Task<DocumentRecord?> GetDocumentAsync(Guid id, CancellationToken ct = default)
     {
         var key = $"docs:{id}";
-        var cached = await cache.GetStringAsync(key, ct);
-        if (cached is not null)
-            return JsonSerializer.Deserialize<DocumentRecord>(cached);
 
-        var doc = await inner.GetDocumentAsync(id, ct);
+        try
+        {
+            var cached = await cache.GetStringAsync(key, ct).ConfigureAwait(false);
+            if (cached is not null)
+            {
+                logger.LogDebug("Cache hit for {Key}", key);
+                return JsonSerializer.Deserialize<DocumentRecord>(cached);
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Cache read failed for key {Key}", key);
+        }
+
+        var doc = await inner.GetDocumentAsync(id, ct).ConfigureAwait(false);
+
         if (doc is not null)
-            await cache.SetStringAsync(key, JsonSerializer.Serialize(doc), DefaultTtl, ct);
+        {
+            try
+            {
+                await cache.SetStringAsync(key, JsonSerializer.Serialize(doc), DefaultTtl, ct)
+                    .ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                logger.LogWarning(ex, "Cache write failed for key {Key}", key);
+            }
+        }
 
         return doc;
     }
@@ -49,12 +84,33 @@ public sealed class CachedDocumentRepository(
     public async Task<IReadOnlyList<DocumentSummary>> ListDocumentsAsync(CancellationToken ct = default)
     {
         const string key = "docs:list";
-        var cached = await cache.GetStringAsync(key, ct);
-        if (cached is not null)
-            return JsonSerializer.Deserialize<List<DocumentSummary>>(cached) ?? [];
 
-        var docs = await inner.ListDocumentsAsync(ct);
-        await cache.SetStringAsync(key, JsonSerializer.Serialize(docs), DefaultTtl, ct);
+        try
+        {
+            var cached = await cache.GetStringAsync(key, ct).ConfigureAwait(false);
+            if (cached is not null)
+            {
+                logger.LogDebug("Cache hit for {Key}", key);
+                return JsonSerializer.Deserialize<List<DocumentSummary>>(cached) ?? [];
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Cache read failed for key {Key}", key);
+        }
+
+        var docs = await inner.ListDocumentsAsync(ct).ConfigureAwait(false);
+
+        try
+        {
+            await cache.SetStringAsync(key, JsonSerializer.Serialize(docs), DefaultTtl, ct)
+                .ConfigureAwait(false);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Cache write failed for key {Key}", key);
+        }
+
         return docs;
     }
 

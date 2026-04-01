@@ -1,4 +1,5 @@
 using System.Net.Http.Json;
+using Microsoft.Extensions.Logging;
 using Muthur.Contracts;
 
 namespace Muthur.Clients;
@@ -7,7 +8,7 @@ namespace Muthur.Clients;
 /// Typed HTTP client for the Muthur API.
 /// Managed by <see cref="IHttpClientFactory"/> — never create or dispose the <see cref="HttpClient"/> yourself.
 /// </summary>
-public sealed class MuthurApiClient(HttpClient httpClient)
+public sealed class MuthurApiClient(ILogger<MuthurApiClient> logger, HttpClient httpClient)
 {
     /// <summary>Creates a new agent session. Returns the session identity.</summary>
     public async Task<CreateSessionResponse> CreateSessionAsync(
@@ -73,12 +74,17 @@ public sealed class MuthurApiClient(HttpClient httpClient)
         return await DeserializeAsync<List<SimilarChunk>>(response, cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task EnsureSuccessAsync(
+    private async Task EnsureSuccessAsync(
         HttpResponseMessage response,
         CancellationToken cancellationToken)
     {
         if (!response.IsSuccessStatusCode)
         {
+            logger.LogWarning("{Method} {Path} returned {StatusCode}",
+                response.RequestMessage?.Method,
+                response.RequestMessage?.RequestUri?.PathAndQuery,
+                (int)response.StatusCode);
+
             using (response)
             {
                 throw await MuthurApiException.FromResponseAsync(response, cancellationToken)

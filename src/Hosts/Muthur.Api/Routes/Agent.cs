@@ -37,7 +37,8 @@ public static class AgentRoutes
 
     private static async Task<IResult> CreateSessionAsync(
         CreateSessionRequest request,
-        ITemporalClient temporal)
+        ITemporalClient temporal,
+        CancellationToken cancellationToken)
     {
         var agentId = Guid.NewGuid().ToString("N")[..8];
         var workflowId = AgentConstants.WorkflowId(agentId);
@@ -50,7 +51,10 @@ public static class AgentRoutes
             await temporal.StartWorkflowAsync(
                 "AgentWorkflow",
                 [new AgentWorkflowInput(agentId, request.SystemPrompt)],
-                new WorkflowOptions(workflowId, AgentConstants.TaskQueue));
+                new WorkflowOptions(workflowId, AgentConstants.TaskQueue)
+                {
+                    Rpc = new RpcOptions { CancellationToken = cancellationToken }
+                });
 
             MuthurMetrics.AgentSessions.Add(1);
             span?.SetSuccess();
@@ -75,7 +79,8 @@ public static class AgentRoutes
     private static async Task<IResult> SendPromptAsync(
         string agentId,
         SendPromptRequest request,
-        ITemporalClient temporal)
+        ITemporalClient temporal,
+        CancellationToken cancellationToken)
     {
         var handle = temporal.GetWorkflowHandle(AgentConstants.WorkflowId(agentId));
 
@@ -83,7 +88,11 @@ public static class AgentRoutes
         {
             await handle.SignalAsync(
                 "SendPrompt",
-                [new PromptSignal(request.Content, request.SystemPrompt)]);
+                [new PromptSignal(request.Content, request.SystemPrompt)],
+                new WorkflowSignalOptions
+                {
+                    Rpc = new RpcOptions { CancellationToken = cancellationToken }
+                });
 
             return Results.Accepted();
         }
@@ -102,13 +111,19 @@ public static class AgentRoutes
 
     private static async Task<IResult> GetAgentStateAsync(
         string agentId,
-        ITemporalClient temporal)
+        ITemporalClient temporal,
+        CancellationToken cancellationToken)
     {
         var handle = temporal.GetWorkflowHandle(AgentConstants.WorkflowId(agentId));
 
         try
         {
-            var state = await handle.QueryAsync<AgentState>("GetState", []);
+            var state = await handle.QueryAsync<AgentState>(
+                "GetState", [],
+                new WorkflowQueryOptions
+                {
+                    Rpc = new RpcOptions { CancellationToken = cancellationToken }
+                });
             return Results.Ok(state);
         }
         catch (RpcException ex) when (ex.Code == RpcException.StatusCode.NotFound)

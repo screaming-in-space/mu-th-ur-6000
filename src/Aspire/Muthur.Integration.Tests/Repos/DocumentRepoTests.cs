@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging.Abstractions;
 using Muthur.Contracts;
 using Muthur.Data;
 using Muthur.Integration.Tests.Infrastructure;
@@ -7,7 +8,8 @@ namespace Muthur.Integration.Tests.Repos;
 [Collection("Muthur")]
 public sealed class DocumentRepoTests(MuthurFixture platform)
 {
-    private DocumentRepository CreateRepo() => new(platform.DataSource);
+    private DocumentRepository CreateRepo() =>
+        new(NullLogger<DocumentRepository>.Instance, platform.DataSource);
 
     [Fact]
     public async Task StoreDocument_ReturnsGuid()

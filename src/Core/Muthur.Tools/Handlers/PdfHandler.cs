@@ -13,14 +13,16 @@ public static class PdfHandler
 {
     private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
 
-    public static async Task<string> ExtractTextAsync(string arguments)
+    public static Task<string> ExtractTextAsync(string arguments, CancellationToken cancellationToken = default)
     {
         var args = JsonSerializer.Deserialize<PdfExtractArgs>(arguments, JsonOptions)
             ?? throw new ArgumentException("Invalid PDF extraction arguments");
 
         if (!File.Exists(args.FilePath))
-            return JsonSerializer.Serialize(new PdfExtractionResult(
-                $"File not found: {args.FilePath}", 0, new()));
+        {
+            return Task.FromResult(JsonSerializer.Serialize(new PdfExtractionResult(
+                $"File not found: {args.FilePath}", 0, new())));
+        }
 
         using var document = PdfDocument.Open(args.FilePath);
 
@@ -28,10 +30,10 @@ public static class PdfHandler
         var metadata = new Dictionary<string, string>();
 
         var info = document.Information;
-        if (info.Title is not null) metadata["title"] = info.Title;
-        if (info.Author is not null) metadata["author"] = info.Author;
-        if (info.Subject is not null) metadata["subject"] = info.Subject;
-        if (info.Creator is not null) metadata["creator"] = info.Creator;
+        if (info.Title is not null) { metadata["title"] = info.Title; }
+        if (info.Author is not null) { metadata["author"] = info.Author; }
+        if (info.Subject is not null) { metadata["subject"] = info.Subject; }
+        if (info.Creator is not null) { metadata["creator"] = info.Creator; }
 
         foreach (Page page in document.GetPages())
         {
@@ -45,7 +47,7 @@ public static class PdfHandler
             document.NumberOfPages,
             metadata);
 
-        return await Task.FromResult(JsonSerializer.Serialize(result));
+        return Task.FromResult(JsonSerializer.Serialize(result));
     }
 
     private sealed record PdfExtractArgs(string FilePath);

@@ -1,12 +1,15 @@
-using System.Text.Json;
 using Dapper;
+using Microsoft.Extensions.Logging;
 using Muthur.Contracts;
 using Npgsql;
 using Pgvector;
+using System.Text.Json;
 
 namespace Muthur.Data;
 
-public sealed class DocumentRepository(NpgsqlDataSource dataSource) : IDocumentRepository
+public sealed class DocumentRepository(
+    ILogger<DocumentRepository> logger,
+    NpgsqlDataSource dataSource) : IDocumentRepository
 {
     public async Task<Guid> StoreDocumentAsync(string? title, string sourcePath, string content,
         int pageCount, Dictionary<string, string> metadata, CancellationToken ct = default)
@@ -17,15 +20,20 @@ public sealed class DocumentRepository(NpgsqlDataSource dataSource) : IDocumentR
             RETURNING id
             """;
 
-        await using var conn = await dataSource.OpenConnectionAsync(ct);
-        return await conn.QuerySingleAsync<Guid>(new CommandDefinition(sql, new
+        await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
+        var id = await conn.QuerySingleAsync<Guid>(new CommandDefinition(sql, new
         {
             Title = title,
             SourcePath = sourcePath,
             Content = content,
             PageCount = pageCount,
             Metadata = JsonSerializer.Serialize(metadata)
-        }, cancellationToken: ct));
+        }, cancellationToken: ct)).ConfigureAwait(false);
+
+        logger.LogInformation("Stored document {DocumentId} — {Title}, {PageCount} pages",
+            id, title ?? "(untitled)", pageCount);
+
+        return id;
     }
 
     public async Task StoreChunksAsync(Guid documentId, IReadOnlyList<TextChunk> chunks,
@@ -36,8 +44,8 @@ public sealed class DocumentRepository(NpgsqlDataSource dataSource) : IDocumentR
             VALUES (@DocumentId, @ChunkIndex, @ChunkText, @Embedding)
             """;
 
-        await using var conn = await dataSource.OpenConnectionAsync(ct);
-        await using var tx = await conn.BeginTransactionAsync(ct);
+        await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
+        await using var tx = await conn.BeginTransactionAsync(ct).ConfigureAwait(false);
 
         for (var i = 0; i < chunks.Count; i++)
         {
@@ -47,10 +55,13 @@ public sealed class DocumentRepository(NpgsqlDataSource dataSource) : IDocumentR
                 ChunkIndex = chunks[i].Index,
                 ChunkText = chunks[i].Text,
                 Embedding = new Vector(embeddings[i])
-            }, transaction: tx, cancellationToken: ct));
+            }, transaction: tx, cancellationToken: ct)).ConfigureAwait(false);
         }
 
-        await tx.CommitAsync(ct);
+        await tx.CommitAsync(ct).ConfigureAwait(false);
+
+        logger.LogInformation("Stored {ChunkCount} chunks for document {DocumentId}",
+            chunks.Count, documentId);
     }
 
     public async Task<DocumentRecord?> GetDocumentAsync(Guid id, CancellationToken ct = default)
@@ -60,9 +71,9 @@ public sealed class DocumentRepository(NpgsqlDataSource dataSource) : IDocumentR
             FROM documents WHERE id = @Id
             """;
 
-        await using var conn = await dataSource.OpenConnectionAsync(ct);
+        await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
         var row = await conn.QuerySingleOrDefaultAsync<DocumentRow>(
-            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct)).ConfigureAwait(false);
 
         return row is null ? null : new DocumentRecord(
             row.Id, row.Title, row.Source_Path, row.Page_Count,
@@ -73,9 +84,9 @@ public sealed class DocumentRepository(NpgsqlDataSource dataSource) : IDocumentR
     public async Task<string?> GetDocumentContentAsync(Guid id, CancellationToken ct = default)
     {
         const string sql = "SELECT content FROM documents WHERE id = @Id";
-        await using var conn = await dataSource.OpenConnectionAsync(ct);
+        await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
         return await conn.QuerySingleOrDefaultAsync<string>(
-            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct));
+            new CommandDefinition(sql, new { Id = id }, cancellationToken: ct)).ConfigureAwait(false);
     }
 
     public async Task<IReadOnlyList<DocumentSummary>> ListDocumentsAsync(CancellationToken ct = default)
@@ -85,9 +96,9 @@ public sealed class DocumentRepository(NpgsqlDataSource dataSource) : IDocumentR
             FROM documents ORDER BY created_at DESC
             """;
 
-        await using var conn = await dataSource.OpenConnectionAsync(ct);
+        await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
         var rows = await conn.QueryAsync<DocumentSummaryRow>(
-            new CommandDefinition(sql, cancellationToken: ct));
+            new CommandDefinition(sql, cancellationToken: ct)).ConfigureAwait(false);
 
         return rows.Select(r => new DocumentSummary(
             r.Id, r.Title, r.Source_Path, r.Page_Count, r.Created_At)).ToList();
@@ -106,16 +117,21 @@ public sealed class DocumentRepository(NpgsqlDataSource dataSource) : IDocumentR
             LIMIT @Limit
             """;
 
-        await using var conn = await dataSource.OpenConnectionAsync(ct);
+        await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
         var rows = await conn.QueryAsync<SimilarChunkRow>(
             new CommandDefinition(sql, new
             {
                 Embedding = new Vector(queryEmbedding),
                 Limit = limit
-            }, cancellationToken: ct));
+            }, cancellationToken: ct)).ConfigureAwait(false);
 
-        return rows.Select(r => new SimilarChunk(
+        var results = rows.Select(r => new SimilarChunk(
             r.Chunk_Text, r.Document_Id, r.Document_Title, r.Score)).ToList();
+
+        logger.LogInformation("Vector search returned {ResultCount} chunks (limit={Limit})",
+            results.Count, limit);
+
+        return results;
     }
 
     // Dapper row types - snake_case matches Postgres column names.

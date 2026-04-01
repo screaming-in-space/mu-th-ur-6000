@@ -34,21 +34,29 @@ public static class DocumentRoutes
             .Produces<IReadOnlyList<SimilarChunk>>();
     }
 
-    private static async Task<IResult> ListDocumentsAsync(IDocumentRepository repo)
+    private static async Task<IResult> ListDocumentsAsync(
+        IDocumentRepository repo,
+        CancellationToken cancellationToken)
     {
-        var docs = await repo.ListDocumentsAsync();
+        var docs = await repo.ListDocumentsAsync(cancellationToken);
         return Results.Ok(docs);
     }
 
-    private static async Task<IResult> GetDocumentAsync(Guid id, IDocumentRepository repo)
+    private static async Task<IResult> GetDocumentAsync(
+        Guid id,
+        IDocumentRepository repo,
+        CancellationToken cancellationToken)
     {
-        var doc = await repo.GetDocumentAsync(id);
+        var doc = await repo.GetDocumentAsync(id, cancellationToken);
         return doc is null ? Results.NotFound() : Results.Ok(doc);
     }
 
-    private static async Task<IResult> GetDocumentContentAsync(Guid id, IDocumentRepository repo)
+    private static async Task<IResult> GetDocumentContentAsync(
+        Guid id,
+        IDocumentRepository repo,
+        CancellationToken cancellationToken)
     {
-        var content = await repo.GetDocumentContentAsync(id);
+        var content = await repo.GetDocumentContentAsync(id, cancellationToken);
         return content is null ? Results.NotFound() : Results.Ok(new DocumentContentResponse(content));
     }
 
@@ -56,11 +64,12 @@ public static class DocumentRoutes
         string q,
         int? limit,
         IDocumentRepository repo,
-        IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator)
+        IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
+        CancellationToken cancellationToken)
     {
-        var embedding = await embeddingGenerator.GenerateAsync(q);
+        var embedding = await embeddingGenerator.GenerateAsync(q, cancellationToken: cancellationToken);
         var queryVector = embedding.Vector.ToArray();
-        var results = await repo.SearchSimilarAsync(queryVector, limit ?? 5);
+        var results = await repo.SearchSimilarAsync(queryVector, limit ?? 5, cancellationToken);
         return Results.Ok(results);
     }
 }

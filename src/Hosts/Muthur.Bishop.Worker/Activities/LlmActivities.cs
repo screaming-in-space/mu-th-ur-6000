@@ -17,6 +17,7 @@ public class LlmActivities(ILogger<LlmActivities> logger, IChatClient chatClient
     [Activity]
     public async Task<LlmActivityOutput> CallLlmAsync(LlmActivityInput input)
     {
+        var cancellationToken = ActivityExecutionContext.Current.CancellationToken;
         logger.LogInformation("Calling LLM with {MessageCount} messages", input.Messages.Count);
         var stopwatch = Stopwatch.StartNew();
 
@@ -66,7 +67,7 @@ public class LlmActivities(ILogger<LlmActivities> logger, IChatClient chatClient
         };
 
         // Call the LLM through the M.E.AI pipeline.
-        var response = await chatClient.GetResponseAsync(chatMessages, options);
+        var response = await chatClient.GetResponseAsync(chatMessages, options, cancellationToken);
 
         stopwatch.Stop();
         MuthurMetrics.LlmDuration.Record(stopwatch.Elapsed.TotalSeconds);

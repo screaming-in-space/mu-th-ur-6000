@@ -1,6 +1,8 @@
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Muthur.PostgreSql;
 using Npgsql;
 using Pgvector.Dapper;
 
@@ -9,8 +11,8 @@ namespace Muthur.Data;
 public static class DataExtensions
 {
     /// <summary>
-    /// Registers Postgres (with pgvector), Redis distributed cache,
-    /// document repository, and schema migration service.
+    /// Registers Postgres (with pgvector + DbUp migrations), Redis distributed cache,
+    /// document repository with caching decorator.
     /// </summary>
     public static IHostApplicationBuilder AddMuthurData(
         this IHostApplicationBuilder builder,
@@ -25,11 +27,14 @@ public static class DataExtensions
 
         SqlMapper.AddTypeHandler(new VectorTypeHandler());
 
+        // Register DbUp migrations from the PostgreSql project (without re-registering the data source).
+        builder.Services.TryAddEnumerable(
+            ServiceDescriptor.Singleton<IHostedService, DatabaseMigrationService>());
+
         builder.AddRedisDistributedCache(redisConnectionName);
 
         builder.Services.AddSingleton<DocumentRepository>();
         builder.Services.AddSingleton<IDocumentRepository, CachedDocumentRepository>();
-        builder.Services.AddHostedService<MigrationService>();
 
         return builder;
     }

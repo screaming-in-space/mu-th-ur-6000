@@ -57,10 +57,11 @@ public class IngestionActivities(
     [Activity]
     public async Task<float[][]> GenerateEmbeddingsAsync(TextChunk[] chunks)
     {
+        var cancellationToken = ActivityExecutionContext.Current.CancellationToken;
         logger.LogInformation("Generating embeddings for {ChunkCount} chunks", chunks.Length);
 
         var texts = chunks.Select(c => c.Text).ToList();
-        var result = await embeddingGenerator.GenerateAsync(texts);
+        var result = await embeddingGenerator.GenerateAsync(texts, cancellationToken: cancellationToken);
         var embeddings = result.Select(e => e.Vector.ToArray()).ToArray();
 
         logger.LogInformation("Generated {Count} embeddings ({Dims} dims each)",
@@ -72,8 +73,9 @@ public class IngestionActivities(
     [Activity]
     public async Task StoreChunksAsync(Guid documentId, TextChunk[] chunks, float[][] embeddings)
     {
+        var cancellationToken = ActivityExecutionContext.Current.CancellationToken;
         logger.LogInformation("Storing {ChunkCount} chunks for document {DocumentId}", chunks.Length, documentId);
-        await repository.StoreChunksAsync(documentId, chunks, embeddings);
+        await repository.StoreChunksAsync(documentId, chunks, embeddings, cancellationToken);
         logger.LogInformation("Stored {ChunkCount} chunks for document {DocumentId}", chunks.Length, documentId);
     }
 }

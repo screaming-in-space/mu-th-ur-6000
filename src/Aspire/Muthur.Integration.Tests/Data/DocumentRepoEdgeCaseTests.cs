@@ -1,4 +1,5 @@
 using Dapper;
+using Microsoft.Extensions.Logging.Abstractions;
 using Muthur.Contracts;
 using Muthur.Data;
 using Muthur.Integration.Tests.Infrastructure;
@@ -12,7 +13,8 @@ namespace Muthur.Integration.Tests.Data;
 [Collection("Muthur")]
 public sealed class DocumentRepoEdgeCaseTests(MuthurFixture platform)
 {
-    private DocumentRepository CreateRepo() => new(platform.DataSource);
+    private DocumentRepository CreateRepo() =>
+        new(NullLogger<DocumentRepository>.Instance, platform.DataSource);
 
     [Fact]
     public async Task StoreDocument_NullTitle_Succeeds()

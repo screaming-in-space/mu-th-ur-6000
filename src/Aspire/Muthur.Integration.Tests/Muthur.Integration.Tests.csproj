@@ -2,16 +2,12 @@
 
   <PropertyGroup>
     <RootNamespace>Muthur.Integration.Tests</RootNamespace>
-    <IsPackable>false</IsPackable>
     <IsTestProject>true</IsTestProject>
   </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="Aspire.Hosting.Testing" />
-    <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="xunit" />
     <PackageReference Include="Temporalio.Extensions.Hosting" />
-    <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
   <ItemGroup>
@@ -19,10 +15,7 @@
     <ProjectReference Include="..\..\Core\Muthur.Contracts\Muthur.Contracts.csproj" />
     <ProjectReference Include="..\..\Core\Muthur.Clients\Muthur.Clients.csproj" />
     <ProjectReference Include="..\..\Core\Muthur.Data\Muthur.Data.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Using Include="Xunit" />
+    <ProjectReference Include="..\..\Core\Muthur.PostgreSql\Muthur.PostgreSql.csproj" />
   </ItemGroup>
 
 </Project>

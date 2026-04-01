@@ -1,9 +1,11 @@
 <Project>
 
+  <!-- Versioning -->
   <PropertyGroup>
     <Version>0.1.0</Version>
   </PropertyGroup>
 
+  <!-- Shared project settings -->
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <LangVersion>14.0</LangVersion>
@@ -11,5 +13,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IncludeSourceRevisionInInformationalVersion>true</IncludeSourceRevisionInInformationalVersion>
   </PropertyGroup>
+
+  <!-- Auto-import test infrastructure for *.Tests and *.Testing projects -->
+  <Import Project="$(MSBuildThisFileDirectory)Test.Build.props"
+          Condition="$(MSBuildProjectName.EndsWith('.Test')) OR $(MSBuildProjectName.EndsWith('.Tests')) OR $(MSBuildProjectName.EndsWith('.Testing'))" />
 
 </Project>
