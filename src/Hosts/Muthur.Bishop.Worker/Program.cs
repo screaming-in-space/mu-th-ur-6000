@@ -17,7 +17,7 @@ builder.Services.Configure<HostOptions>(options =>
     options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
 
 builder.AddServiceDefaults();
-builder.AddMuthurData("muthur-db", "muthur-cache");
+builder.AddMuthurData("muthur-db", "muthur-cache", runMigrations: false);
 builder.AddAgentChatClient();
 builder.AddAgentEmbeddingGenerator();
 

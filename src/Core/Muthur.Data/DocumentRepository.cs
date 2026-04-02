@@ -36,44 +36,29 @@ public sealed class DocumentRepository(
         return id;
     }
 
-    private const int ChunkBatchSize = 10;
-
     public async Task StoreChunksAsync(Guid documentId, IReadOnlyList<TextChunk> chunks,
         IReadOnlyList<float[]> embeddings, CancellationToken ct = default)
     {
-        const string sql = """
-            INSERT INTO document_chunks (document_id, chunk_index, chunk_text, embedding)
-            VALUES (@DocumentId, @ChunkIndex, @ChunkText, @Embedding)
-            """;
-
         await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
-        await using var tx = await conn.BeginTransactionAsync(ct).ConfigureAwait(false);
 
-        // Batch inserts to reduce per-command overhead and log noise.
-        for (var batch = 0; batch < chunks.Count; batch += ChunkBatchSize)
+        // Postgres COPY binary import — one command for all rows, no per-row overhead.
+        await using var writer = await conn.BeginBinaryImportAsync(
+            "COPY document_chunks (document_id, chunk_index, chunk_text, embedding) FROM STDIN (FORMAT BINARY)", ct)
+            .ConfigureAwait(false);
+
+        for (var i = 0; i < chunks.Count; i++)
         {
-            var batchEnd = Math.Min(batch + ChunkBatchSize, chunks.Count);
-            var parameters = new List<object>(ChunkBatchSize);
-
-            for (var i = batch; i < batchEnd; i++)
-            {
-                parameters.Add(new
-                {
-                    DocumentId = documentId,
-                    ChunkIndex = chunks[i].Index,
-                    ChunkText = chunks[i].Text,
-                    Embedding = new Vector(embeddings[i])
-                });
-            }
-
-            await conn.ExecuteAsync(new CommandDefinition(sql, parameters,
-                transaction: tx, cancellationToken: ct)).ConfigureAwait(false);
+            await writer.StartRowAsync(ct).ConfigureAwait(false);
+            await writer.WriteAsync(documentId, ct).ConfigureAwait(false);
+            await writer.WriteAsync(chunks[i].Index, ct).ConfigureAwait(false);
+            await writer.WriteAsync(chunks[i].Text, ct).ConfigureAwait(false);
+            await writer.WriteAsync(new Vector(embeddings[i]), ct).ConfigureAwait(false);
         }
 
-        await tx.CommitAsync(ct).ConfigureAwait(false);
+        await writer.CompleteAsync(ct).ConfigureAwait(false);
 
-        logger.LogInformation("Stored {ChunkCount} chunks for document {DocumentId} ({Batches} batches)",
-            chunks.Count, documentId, (chunks.Count + ChunkBatchSize - 1) / ChunkBatchSize);
+        logger.LogInformation("Stored {ChunkCount} chunks for document {DocumentId} (COPY)",
+            chunks.Count, documentId);
     }
 
     public async Task<DocumentRecord?> GetDocumentAsync(Guid id, CancellationToken ct = default)

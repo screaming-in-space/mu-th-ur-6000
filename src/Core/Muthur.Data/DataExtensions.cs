@@ -10,19 +10,20 @@ namespace Muthur.Data;
 public static class DataExtensions
 {
     /// <summary>
-    /// Registers Postgres (with pgvector + DbUp migrations), Redis distributed cache,
+    /// Registers Postgres (with pgvector), Redis distributed cache,
     /// document repository with caching decorator.
+    /// Set <paramref name="runMigrations"/> to false when another service owns migrations.
     /// </summary>
     public static IHostApplicationBuilder AddMuthurData(
         this IHostApplicationBuilder builder,
         string postgresConnectionName,
-        string redisConnectionName)
+        string redisConnectionName,
+        bool runMigrations = true)
     {
-        // Postgres + pgvector + DbUp migrations through the shared PostgreSql project.
         builder.AddMuthurPostgreSql(postgresConnectionName, configureDataSource: dsb =>
         {
             dsb.UseVector();
-        });
+        }, runMigrations);
 
         SqlMapper.AddTypeHandler(new VectorTypeHandler());
 
