@@ -7,8 +7,8 @@ namespace Muthur.Bishop.Worker.Activities;
 
 /// <summary>
 /// Publishes relay events to the API's SignalR hub via HTTP.
-/// Best-effort: logs failures but does not throw, so ingestion
-/// completes even if the notification is undeliverable.
+/// Best-effort: logs failures but does not throw, so workflows
+/// complete even if the notification is undeliverable.
 /// </summary>
 public class NotificationActivities(ILogger<NotificationActivities> logger, IHttpClientFactory httpClientFactory)
 {
@@ -16,29 +16,21 @@ public class NotificationActivities(ILogger<NotificationActivities> logger, IHtt
     public const string HttpClientName = "muthur-relay";
 
     [Activity]
-    public async Task NotifyIngestionCompleteAsync(string agentId, Guid documentId)
+    public async Task NotifyAsync(RelayEvent relay)
     {
-        var relay = new RelayEvent(
-            agentId,
-            documentId,
-            RelayEventType.IngestionCompleted,
-            $"Document {documentId} ingestion complete.",
-            DateTimeOffset.UtcNow,
-            new Dictionary<string, string> { ["documentId"] = documentId.ToString() });
-
         try
         {
             using var httpClient = httpClientFactory.CreateClient(HttpClientName);
             var response = await httpClient.PostAsJsonAsync(
-                $"v1/relay/{agentId}/events", relay);
+                $"v1/relay/{relay.AgentId}/events", relay);
 
             response.EnsureSuccessStatusCode();
-            logger.LogInformation("Notified ingestion complete for document {DocumentId} on agent {AgentId}",
-                documentId, agentId);
+            logger.LogInformation("Relay: {EventType} for agent {AgentId}", relay.EventType, relay.AgentId);
         }
         catch (Exception ex)
         {
-            logger.LogWarning(ex, "Failed to notify ingestion complete for document {DocumentId}", documentId);
+            logger.LogWarning(ex, "Failed to send relay event {EventType} for agent {AgentId}",
+                relay.EventType, relay.AgentId);
         }
     }
 }

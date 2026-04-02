@@ -16,9 +16,9 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Core\Muthur.Clients\Muthur.Clients.csproj" />
     <ProjectReference Include="..\..\Core\Muthur.Contracts\Muthur.Contracts.csproj" />
     <ProjectReference Include="..\..\Core\Muthur.ServiceDefaults\Muthur.ServiceDefaults.csproj" />
-    <ProjectReference Include="..\..\Core\Muthur.Utilities\Muthur.Utilities.csproj" />
   </ItemGroup>
 
 </Project>

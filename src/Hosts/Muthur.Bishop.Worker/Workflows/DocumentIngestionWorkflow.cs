@@ -49,10 +49,17 @@ public class DocumentIngestionWorkflow
                 }
             });
 
-        // Step 4: Notify relay hub that ingestion is complete.
+        // Step 4: Notify relay hub that ingestion is complete — search is now available.
+        var relay = new RelayEvent(
+            input.AgentId,
+            input.DocumentId,
+            RelayEventType.IngestionCompleted,
+            $"Document {input.DocumentId} embeddings complete. Search available.",
+            DateTimeOffset.UtcNow,
+            new Dictionary<string, string> { ["documentId"] = input.DocumentId.ToString() });
+
         await Workflow.ExecuteActivityAsync(
-            (NotificationActivities act) =>
-                act.NotifyIngestionCompleteAsync(input.AgentId, input.DocumentId),
+            (NotificationActivities act) => act.NotifyAsync(relay),
             new ActivityOptions
             {
                 StartToCloseTimeout = TimeSpan.FromSeconds(30),

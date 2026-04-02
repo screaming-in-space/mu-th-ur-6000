@@ -61,6 +61,10 @@ public class AgentWorkflow
             new(AgentConstants.RoleUser, signal.Content)
         };
 
+        // Extraction cache: the workflow is the data plane, the LLM is the control plane.
+        // Full document text lives here, not in the LLM's context window.
+        var extractions = new Dictionary<string, PdfExtractionResult>();
+
         // The agentic loop - keep calling the LLM until it stops requesting tools.
         while (true)
         {
@@ -73,8 +77,14 @@ public class AgentWorkflow
             // No tool calls - the LLM produced a final response.
             if (llmOutput.ToolCalls.Length == 0)
             {
-                Workflow.Logger.LogInformation("LLM produced final response ({Length} chars)", llmOutput.Content?.Length ?? 0);
-                return llmOutput.Content ?? "(no response)";
+                var response = llmOutput.Content ?? "(no response)";
+                Workflow.Logger.LogInformation("LLM produced final response ({Length} chars)", response.Length);
+
+                await EmitRelayEventAsync(agentId, RelayEventType.AgentResponseReady,
+                    "Agent response ready.",
+                    new() { ["responseLength"] = response.Length.ToString() });
+
+                return response;
             }
 
             Workflow.Logger.LogInformation("LLM requested {Count} tool call(s): {Tools}",
@@ -89,8 +99,16 @@ public class AgentWorkflow
             // Execute each tool call as a separate Temporal activity.
             foreach (var toolCall in llmOutput.ToolCalls)
             {
+                // If store_document, enrich arguments with cached extraction text
+                // so the LLM never carries document content.
+                var arguments = toolCall.Arguments;
+                if (toolCall.Name == "store_document")
+                {
+                    arguments = EnrichStoreArguments(arguments, extractions);
+                }
+
                 var toolResult = await Workflow.ExecuteActivityAsync(
-                    (ToolActivities act) => act.ExecuteToolAsync(toolCall.Name, toolCall.Arguments),
+                    (ToolActivities act) => act.ExecuteToolAsync(toolCall.Name, arguments),
                     new ActivityOptions
                     {
                         StartToCloseTimeout = TimeSpan.FromMinutes(5),
@@ -102,21 +120,100 @@ public class AgentWorkflow
                         }
                     });
 
+                // Cache extraction results; send only a summary to the LLM.
+                var llmResult = toolResult;
+                if (toolCall.Name == "extract_pdf_text")
+                {
+                    llmResult = CacheExtraction(toolResult, toolCall.Arguments, extractions);
+                }
+
                 // Append tool result to conversation history.
                 messages.Add(new ConversationMessage(
                     AgentConstants.RoleTool,
-                    toolResult,
+                    llmResult,
                     ToolCallId: toolCall.Id));
 
-                // Kick off document ingestion as a child workflow when a document is stored.
-                // Runs independently - doesn't block the conversation or die with ContinueAsNew.
+                // When a document is stored: notify the client, then fork ingestion.
                 if (toolCall.Name == "store_document")
                 {
-                    await TryStartIngestionAsync(agentId, toolCall.Arguments, toolResult);
+                    await EmitRelayEventAsync(agentId, RelayEventType.DocumentStored,
+                        "Document stored in Postgres.",
+                        ParseDocumentId(toolResult));
+
+                    // Fire-and-forget child workflow for chunking + embedding.
+                    // Runs independently - doesn't block the conversation or die with ContinueAsNew.
+                    await TryStartIngestionAsync(agentId, arguments, toolResult);
                 }
             }
 
             // Loop: send tool results back to the LLM for the next turn.
+        }
+    }
+
+    /// <summary>
+    /// Caches the full extraction result in workflow state, returns a summary for the LLM.
+    /// The LLM needs metadata to decide next steps — not 126K chars of document text.
+    /// </summary>
+    private static string CacheExtraction(
+        string toolResult, string toolArguments, Dictionary<string, PdfExtractionResult> extractions)
+    {
+        try
+        {
+            var extraction = JsonSerializer.Deserialize<PdfExtractionResult>(toolResult, JsonOptions);
+            var args = JsonSerializer.Deserialize<ExtractPdfArgs>(toolArguments, JsonOptions);
+            if (extraction is null || args?.FilePath is null) return toolResult;
+
+            extractions[args.FilePath] = extraction;
+
+            return JsonSerializer.Serialize(new
+            {
+                Status = "extracted",
+                extraction.PageCount,
+                extraction.Metadata,
+                TextLength = extraction.Text.Length,
+                SourcePath = args.FilePath,
+                Message = "Text extracted successfully. Call store_document to persist."
+            });
+        }
+        catch
+        {
+            return toolResult;
+        }
+    }
+
+    /// <summary>
+    /// Enriches store_document arguments with the cached extraction text.
+    /// The LLM sends metadata only; the workflow injects the full content.
+    /// </summary>
+    private static string EnrichStoreArguments(
+        string arguments, Dictionary<string, PdfExtractionResult> extractions)
+    {
+        try
+        {
+            var args = JsonSerializer.Deserialize<StoreDocumentArgs>(arguments, JsonOptions);
+            if (args?.SourcePath is null) return arguments;
+
+            // If the LLM already provided text (shouldn't, but defensive), pass through.
+            if (!string.IsNullOrEmpty(args.Text)) return arguments;
+
+            if (!extractions.TryGetValue(args.SourcePath, out var extraction)) return arguments;
+
+            // Inject cached text and metadata from extraction.
+            var title = args.Title ?? extraction.Metadata.GetValueOrDefault("title");
+            var pageCount = args.PageCount > 0 ? args.PageCount : extraction.PageCount;
+
+            return JsonSerializer.Serialize(new
+            {
+                Title = title,
+                args.SourcePath,
+                Text = extraction.Text,
+                PageCount = pageCount,
+                Metadata = args.Metadata ?? extraction.Metadata
+            });
+        }
+        catch
+        {
+            return arguments;
         }
     }
 
@@ -170,6 +267,41 @@ public class AgentWorkflow
             Workflow.Logger.LogWarning(ex, "Failed to start ingestion for document {DocumentId}", parsedResult?.DocumentId);
         }
     }
+
+    /// <summary>Emits a relay event via the notification activity. Best-effort — never blocks the workflow.</summary>
+    private static async Task EmitRelayEventAsync(
+        string agentId, RelayEventType eventType, string message, Dictionary<string, string>? metadata = null)
+    {
+        var relay = new RelayEvent(agentId, Guid.NewGuid(), eventType, message, DateTimeOffset.UtcNow, metadata);
+
+        await Workflow.ExecuteActivityAsync(
+            (NotificationActivities act) => act.NotifyAsync(relay),
+            new ActivityOptions
+            {
+                StartToCloseTimeout = TimeSpan.FromSeconds(30),
+                RetryPolicy = new Temporalio.Common.RetryPolicy
+                {
+                    MaximumAttempts = 2,
+                    InitialInterval = TimeSpan.FromSeconds(1)
+                }
+            });
+    }
+
+    private static Dictionary<string, string>? ParseDocumentId(string toolResult)
+    {
+        try
+        {
+            var result = JsonSerializer.Deserialize<StoreDocumentResult>(toolResult, JsonOptions);
+            return result?.DocumentId is { } id
+                ? new() { ["documentId"] = id.ToString() }
+                : null;
+        }
+        catch { return null; }
+    }
+
+    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
+
+    private sealed record ExtractPdfArgs(string? FilePath);
 
     private sealed record StoreDocumentArgs(
         string? Title, string? SourcePath, string? Text,

@@ -2,7 +2,6 @@
 using Microsoft.Extensions.Hosting;
 using Muthur.Clients;
 using Muthur.ServiceDefaults;
-using Muthur.Utilities;
 
 namespace Muthur.Console;
 
@@ -18,7 +17,6 @@ internal class StartupExtensions
 
         builder.AddServiceDefaults();
         builder.Services.AddMuthurApiClient(new Uri("http://muthur-api"));
-        builder.Services.AddAgentRunner();
 
         // Named HttpClient for the SignalR relay connection.
         // Service discovery is applied via ConfigureHttpClientDefaults in AddServiceDefaults().

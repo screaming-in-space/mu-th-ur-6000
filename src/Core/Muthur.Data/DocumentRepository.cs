@@ -36,6 +36,8 @@ public sealed class DocumentRepository(
         return id;
     }
 
+    private const int ChunkBatchSize = 10;
+
     public async Task StoreChunksAsync(Guid documentId, IReadOnlyList<TextChunk> chunks,
         IReadOnlyList<float[]> embeddings, CancellationToken ct = default)
     {
@@ -47,21 +49,31 @@ public sealed class DocumentRepository(
         await using var conn = await dataSource.OpenConnectionAsync(ct).ConfigureAwait(false);
         await using var tx = await conn.BeginTransactionAsync(ct).ConfigureAwait(false);
 
-        for (var i = 0; i < chunks.Count; i++)
+        // Batch inserts to reduce per-command overhead and log noise.
+        for (var batch = 0; batch < chunks.Count; batch += ChunkBatchSize)
         {
-            await conn.ExecuteAsync(new CommandDefinition(sql, new
+            var batchEnd = Math.Min(batch + ChunkBatchSize, chunks.Count);
+            var parameters = new List<object>(ChunkBatchSize);
+
+            for (var i = batch; i < batchEnd; i++)
             {
-                DocumentId = documentId,
-                ChunkIndex = chunks[i].Index,
-                ChunkText = chunks[i].Text,
-                Embedding = new Vector(embeddings[i])
-            }, transaction: tx, cancellationToken: ct)).ConfigureAwait(false);
+                parameters.Add(new
+                {
+                    DocumentId = documentId,
+                    ChunkIndex = chunks[i].Index,
+                    ChunkText = chunks[i].Text,
+                    Embedding = new Vector(embeddings[i])
+                });
+            }
+
+            await conn.ExecuteAsync(new CommandDefinition(sql, parameters,
+                transaction: tx, cancellationToken: ct)).ConfigureAwait(false);
         }
 
         await tx.CommitAsync(ct).ConfigureAwait(false);
 
-        logger.LogInformation("Stored {ChunkCount} chunks for document {DocumentId}",
-            chunks.Count, documentId);
+        logger.LogInformation("Stored {ChunkCount} chunks for document {DocumentId} ({Batches} batches)",
+            chunks.Count, documentId, (chunks.Count + ChunkBatchSize - 1) / ChunkBatchSize);
     }
 
     public async Task<DocumentRecord?> GetDocumentAsync(Guid id, CancellationToken ct = default)

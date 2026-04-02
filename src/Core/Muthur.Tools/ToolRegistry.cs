@@ -32,17 +32,17 @@ public sealed class ToolRegistry
             "extract_pdf_text"));
 
         // Document storage - persists extracted text to Postgres.
+        // The LLM provides metadata only; the workflow injects cached extraction text.
         _handlers["store_document"] = documentStoreHandler.StoreAsync;
         _tools.Add(AIFunctionFactory.Create(
-            [Description("Store extracted document text and metadata in the knowledge base. " +
-                         "Call this after extracting text from a PDF to persist it for future search. " +
+            [Description("Store a previously extracted document in the knowledge base for future search. " +
+                         "Call this after extract_pdf_text to persist the document. " +
+                         "The extracted text is injected automatically — only provide metadata. " +
                          "Returns the stored document ID.")]
             async (
                 [Description("Document title")] string title,
-                [Description("Original file path")] string sourcePath,
-                [Description("Full extracted text content")] string text,
+                [Description("Original file path (same path used in extract_pdf_text)")] string sourcePath,
                 [Description("Number of pages in the document")] int pageCount,
-                [Description("Document metadata as JSON string")] string? metadata,
                 CancellationToken cancellationToken
             ) =>
             {
@@ -50,11 +50,7 @@ public sealed class ToolRegistry
                 {
                     Title = title,
                     SourcePath = sourcePath,
-                    Text = text,
                     PageCount = pageCount,
-                    Metadata = string.IsNullOrEmpty(metadata)
-                        ? new Dictionary<string, string>()
-                        : JsonSerializer.Deserialize<Dictionary<string, string>>(metadata)
                 });
                 return await documentStoreHandler.StoreAsync(args, cancellationToken).ConfigureAwait(false);
             },
