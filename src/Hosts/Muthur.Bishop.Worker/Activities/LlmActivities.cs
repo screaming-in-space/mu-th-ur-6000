@@ -39,25 +39,35 @@ public class LlmActivities(ILogger<LlmActivities> logger, IChatClient chatClient
                 _ => ChatRole.User
             };
 
-            var chatMessage = new ChatMessage(role, msg.Content);
+            // Tool results: FunctionResultContent only, no duplicate text content.
+            if (msg.ToolCallId is not null)
+            {
+                var toolMsg = new ChatMessage(role, [new FunctionResultContent(msg.ToolCallId, msg.Content)]);
+                chatMessages.Add(toolMsg);
+                continue;
+            }
 
-            // Reconstruct tool call content for assistant messages.
+            // Assistant messages with tool calls: FunctionCallContent, text only if non-empty.
             if (msg.ToolCalls is { Length: > 0 })
             {
+                var assistantMsg = new ChatMessage(role, (IList<AIContent>)[]);
+                if (!string.IsNullOrEmpty(msg.Content))
+                {
+                    assistantMsg.Contents.Add(new TextContent(msg.Content));
+                }
+
                 foreach (var tc in msg.ToolCalls)
                 {
                     var args = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object?>>(tc.Arguments);
-                    chatMessage.Contents.Add(new FunctionCallContent(tc.Id, tc.Name, args));
+                    assistantMsg.Contents.Add(new FunctionCallContent(tc.Id, tc.Name, args));
                 }
+
+                chatMessages.Add(assistantMsg);
+                continue;
             }
 
-            // Reconstruct tool result content for tool messages.
-            if (msg.ToolCallId is not null)
-            {
-                chatMessage.Contents.Add(new FunctionResultContent(msg.ToolCallId, msg.Content));
-            }
-
-            chatMessages.Add(chatMessage);
+            // User and other messages: plain text.
+            chatMessages.Add(new ChatMessage(role, msg.Content));
         }
 
         // Configure tool availability.

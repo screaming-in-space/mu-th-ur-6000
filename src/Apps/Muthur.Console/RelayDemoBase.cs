@@ -76,7 +76,10 @@ public abstract class RelayDemoBase : IAsyncDisposable
             Logger.LogInformation("[{EventType}] {Message}", evt.EventType, evt.Message);
 
             var done = await OnEventAsync(evt, cancellationToken);
-            if (done) return;
+            if (done)
+            {
+                return;
+            }
         }
     }
 
@@ -91,7 +94,9 @@ public abstract class RelayDemoBase : IAsyncDisposable
     public async ValueTask DisposeAsync()
     {
         if (_connection is not null)
+        {
             await _connection.DisposeAsync();
+        }
 
         GC.SuppressFinalize(this);
     }

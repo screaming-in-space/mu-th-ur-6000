@@ -54,15 +54,32 @@ public class IngestionActivities(
         return Task.FromResult(chunks.ToArray());
     }
 
+    private const int EmbeddingBatchSize = 10;
+
     [Activity]
     public async Task<float[][]> GenerateEmbeddingsAsync(TextChunk[] chunks)
     {
         var cancellationToken = ActivityExecutionContext.Current.CancellationToken;
         logger.LogInformation("Generating embeddings for {ChunkCount} chunks", chunks.Length);
 
-        var texts = chunks.Select(c => c.Text).ToList();
-        var result = await embeddingGenerator.GenerateAsync(texts, cancellationToken: cancellationToken);
-        var embeddings = result.Select(e => e.Vector.ToArray()).ToArray();
+        var embeddings = new float[chunks.Length][];
+
+        // Batch embedding calls to stay within provider limits.
+        for (var batch = 0; batch < chunks.Length; batch += EmbeddingBatchSize)
+        {
+            var batchTexts = chunks
+                .Skip(batch)
+                .Take(EmbeddingBatchSize)
+                .Select(c => c.Text)
+                .ToList();
+
+            var result = await embeddingGenerator.GenerateAsync(batchTexts, cancellationToken: cancellationToken);
+
+            for (var i = 0; i < result.Count; i++)
+            {
+                embeddings[batch + i] = result[i].Vector.ToArray();
+            }
+        }
 
         logger.LogInformation("Generated {Count} embeddings ({Dims} dims each)",
             embeddings.Length, embeddings.FirstOrDefault()?.Length ?? 0);
