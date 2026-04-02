@@ -2,6 +2,7 @@ namespace Muthur.Contracts;
 
 /// <summary>Input for the document ingestion child workflow.</summary>
 public sealed record DocumentIngestionInput(
+    string AgentId,
     Guid DocumentId,
     string SourcePath,
     string Text,

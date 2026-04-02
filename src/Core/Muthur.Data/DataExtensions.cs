@@ -1,6 +1,5 @@
 using Dapper;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Muthur.PostgreSql;
 using Npgsql;
@@ -19,17 +18,13 @@ public static class DataExtensions
         string postgresConnectionName,
         string redisConnectionName)
     {
-        // Register pgvector type mapping on the Npgsql data source + Dapper type handler.
-        builder.AddNpgsqlDataSource(postgresConnectionName, configureDataSourceBuilder: dsb =>
+        // Postgres + pgvector + DbUp migrations through the shared PostgreSql project.
+        builder.AddMuthurPostgreSql(postgresConnectionName, configureDataSource: dsb =>
         {
             dsb.UseVector();
         });
 
         SqlMapper.AddTypeHandler(new VectorTypeHandler());
-
-        // Register DbUp migrations from the PostgreSql project (without re-registering the data source).
-        builder.Services.TryAddEnumerable(
-            ServiceDescriptor.Singleton<IHostedService, DatabaseMigrationService>());
 
         builder.AddRedisDistributedCache(redisConnectionName);
 

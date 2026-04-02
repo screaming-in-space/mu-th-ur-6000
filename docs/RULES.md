@@ -2,6 +2,17 @@
 
 Technical constraints and rejected patterns for mu-th-ur-6000.
 
+## Design Principles
+
+These apply everywhere. No exceptions.
+
+- **Single Responsibility** — one class, one reason to change. One extension method, one registration path.
+- **DRY** — one code path to each infrastructure concern. If `AddNpgsqlDataSource` is called in two places, one of them will drift. The one that drifts will be the one production uses.
+- **KISS** — the simplest correct solution. If a named HttpClient works, don't use a typed client that conflicts with another DI registration.
+- **YAGNI** — don't build it until you need it. Don't add a persistence lifetime until you've proven the password survives restarts.
+
+When a bug is found, check whether the fix is in one place or scattered. If scattered, consolidate first, then fix. Tests must exercise the same code path production uses — a test that bypasses a registration is a false green.
+
 ## Stack
 
 - .NET 10 / C# 14.0 - `LangVersion 14.0`, nullable enabled, implicit usings
@@ -21,7 +32,7 @@ Technical constraints and rejected patterns for mu-th-ur-6000.
 
 - One activity per side effect. Each LLM call and each tool call is its own `ExecuteActivityAsync` - a separate Temporal checkpoint.
 - Use `ContinueAsNew` after N turns (default 50). Event histories grow unbounded otherwise.
-- Carry conversation history in signals, not workflow state. The workflow is stateless.
+- Each turn builds conversation history locally in `ProcessPromptAsync` from the single prompt in the signal. The workflow is stateless — history is not carried across turns or in workflow state.
 - Use `WaitConditionAsync` for signal-driven loops. Never `Task.Delay` to poll.
 - Use `RetryPolicy` on tool activities. LLM activities get a single attempt with a long timeout.
 - Use scoped activities (`AddScopedActivities<T>`) for DI - each execution gets a fresh scope.
@@ -91,7 +102,8 @@ Technical constraints and rejected patterns for mu-th-ur-6000.
 ### Do
 
 - Use the `pgvector/pgvector:pg17` Docker image - ships with the vector extension pre-installed.
-- Register `NpgsqlDataSource` via Aspire's `AddNpgsqlDataSource()` with `dsb.UseVector()`. The `UseVector()` extension is in the `Npgsql` namespace (not `Pgvector.Npgsql` - that's the internal namespace, not the import you need).
+- Register `NpgsqlDataSource` through `AddMuthurPostgreSql()` in `Muthur.PostgreSql` — the single code path for Npgsql configuration, `PersistSecurityInfo`, and DbUp migrations. Never call `AddNpgsqlDataSource()` directly from other projects.
+- `UseVector()` is configured via the `configureDataSource` callback. The extension is in the `Npgsql` namespace (not `Pgvector.Npgsql`).
 - Register `Pgvector.Dapper.VectorTypeHandler` via `SqlMapper.AddTypeHandler(new VectorTypeHandler())` for Dapper compatibility.
 - Use `vector(768)` columns for OpenAI `text-embedding-3-small` embeddings.
 - Use HNSW index (`USING hnsw ... vector_cosine_ops`) for approximate nearest neighbor search.
@@ -125,10 +137,10 @@ Technical constraints and rejected patterns for mu-th-ur-6000.
 ### Do
 
 - Use `AddTemporalDevServer` to run Temporal as an Aspire-managed container resource.
-- Use `AddPostgres().WithImage("pgvector/pgvector").WithImageTag("pg17").AddDatabase()` for Postgres with pgvector.
+- Use `AddPostgres().WithImage("pgvector/pgvector").WithImageTag("pg17").AddDatabase()` for Postgres with pgvector. No `ContainerLifetime.Persistent` — see above.
 - Use `AddRedis()` for the cache layer.
 - Use `.WithReference().WaitFor()` on both Worker and Api for all infrastructure resources.
-- Use `WithLifetime(ContainerLifetime.Persistent)` on all containers - survives AppHost restarts.
+- Use `WithLifetime(ContainerLifetime.Persistent)` only on containers without password-based auth (Redis, Temporal). Postgres with auto-generated passwords will fail on restart because the data volume retains the old password while Aspire generates a new one. Let Postgres recreate each session — the demo re-ingests data on every run anyway.
 - Use `EnsureDockerAsync()` in the AppHost to auto-launch Docker Desktop if not running.
 - Mark non-service project references with `IsAspireProjectResource="false"` in the AppHost csproj.
 - Use `ASPIRE_ALLOW_UNSECURED_TRANSPORT=true` in launch profiles for HTTP-only local dev.

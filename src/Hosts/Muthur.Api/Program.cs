@@ -1,3 +1,4 @@
+using Muthur.Api;
 using Muthur.Api.Routes;
 using Muthur.Data;
 using Muthur.ServiceDefaults;
@@ -6,6 +7,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 builder.AddMuthurData("muthur-db", "muthur-cache");
+builder.AddMuthurSignalR("muthur-cache");
 builder.AddAgentEmbeddingGenerator();
 builder.Services.AddOpenApi();
 
@@ -22,5 +24,6 @@ app.MapDefaultEndpoints();
 app.MapOpenApi();
 app.MapAgentRoutes();
 app.MapDocumentRoutes();
+app.MapRelayRoutes();
 
 await app.RunAsync();

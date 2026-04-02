@@ -2,7 +2,6 @@ using Aspire.Hosting;
 using Aspire.Hosting.ApplicationModel;
 using Aspire.Hosting.Testing;
 using Dapper;
-using DbUp;
 using Microsoft.Extensions.DependencyInjection;
 using Npgsql;
 using Pgvector.Dapper;
@@ -12,7 +11,9 @@ namespace Muthur.Integration.Tests.Infrastructure;
 /// <summary>
 /// Shared Aspire fixture — one instance per test run.
 /// Starts the full AppHost (Temporal, Postgres, Redis, API, Worker),
-/// waits for health, runs migrations, and exposes clients.
+/// waits for health, and exposes clients. Migrations run through the
+/// real DatabaseMigrationService hosted in the API and Worker — not
+/// duplicated here.
 /// </summary>
 public sealed class MuthurFixture : IAsyncLifetime
 {
@@ -35,19 +36,16 @@ public sealed class MuthurFixture : IAsyncLifetime
 
         var notifications = _app.Services.GetRequiredService<ResourceNotificationService>();
 
-        // Wait for Postgres and run migrations.
-        await notifications.WaitForResourceHealthyAsync("muthur-db");
+        // Wait for API to be healthy — this means Postgres is up and
+        // DatabaseMigrationService has run through the real code path.
+        await notifications.WaitForResourceHealthyAsync("muthur-api");
+        ApiHttpClient = _app.CreateHttpClient("muthur-api");
 
+        // Direct data source for test assertions that query the DB.
         var connectionString = await _app.GetConnectionStringAsync("muthur-db");
         var dsb = new NpgsqlDataSourceBuilder(connectionString);
         dsb.UseVector();
         _dataSource = dsb.Build();
-
-        await RunMigrationsAsync(connectionString!);
-
-        // Wait for API to be healthy, then create client.
-        await notifications.WaitForResourceHealthyAsync("muthur-api");
-        ApiHttpClient = _app.CreateHttpClient("muthur-api");
     }
 
     public async Task DisposeAsync()
@@ -60,23 +58,5 @@ public sealed class MuthurFixture : IAsyncLifetime
             await _app.StopAsync();
             await _app.DisposeAsync();
         }
-    }
-
-    private static Task RunMigrationsAsync(string connectionString)
-    {
-        var upgrader = DeployChanges.To
-            .PostgresqlDatabase(connectionString)
-            .WithScriptsEmbeddedInAssembly(typeof(Muthur.PostgreSql.DatabaseMigrationService).Assembly)
-            .LogToConsole()
-            .Build();
-
-        var result = upgrader.PerformUpgrade();
-
-        if (!result.Successful)
-        {
-            throw result.Error;
-        }
-
-        return Task.CompletedTask;
     }
 }

@@ -13,7 +13,6 @@ var lmstudio = builder.AddLMStudio("muthur-lmstudio")
 var postgres = builder.AddPostgres("muthur-postgres")
     .WithImage("pgvector/pgvector")
     .WithImageTag("pg17")
-    .WithLifetime(ContainerLifetime.Persistent)
     .AddDatabase("muthur-db");
 
 var cache = builder.AddRedis("muthur-cache")
@@ -34,10 +33,12 @@ var worker = builder.AddProject<Projects.Muthur_Bishop_Worker>("muthur-bishop-wo
     .WithReference(lmstudio)
     .WithReference(postgres)
     .WithReference(cache)
+    .WithReference(api)
     .WaitFor(temporal)
     .WaitFor(lmstudio)
     .WaitFor(postgres)
-    .WaitFor(cache);
+    .WaitFor(cache)
+    .WaitFor(api);
 
 builder.AddProject<Projects.Muthur_Console>("muthur-console")
     .WithReference(api)

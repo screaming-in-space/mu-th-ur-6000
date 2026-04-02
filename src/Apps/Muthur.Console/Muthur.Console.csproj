@@ -10,10 +10,13 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
     <PackageReference Include="Microsoft.Extensions.Hosting" />
+    <PackageReference Include="Microsoft.Extensions.Http" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\..\Core\Muthur.Contracts\Muthur.Contracts.csproj" />
     <ProjectReference Include="..\..\Core\Muthur.ServiceDefaults\Muthur.ServiceDefaults.csproj" />
     <ProjectReference Include="..\..\Core\Muthur.Utilities\Muthur.Utilities.csproj" />
   </ItemGroup>

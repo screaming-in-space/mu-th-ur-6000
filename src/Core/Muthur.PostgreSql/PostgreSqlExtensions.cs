@@ -20,6 +20,9 @@ public static class PostgreSqlExtensions
     {
         builder.AddNpgsqlDataSource(connectionName, configureDataSourceBuilder: dsb =>
         {
+            // Npgsql strips the password from ConnectionString by default.
+            // DbUp reads ConnectionString directly, so it needs the password retained.
+            dsb.ConnectionStringBuilder.PersistSecurityInfo = true;
             configureDataSource?.Invoke(dsb);
         });
 

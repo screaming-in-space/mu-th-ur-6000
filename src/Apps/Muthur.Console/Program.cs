@@ -1,7 +1,11 @@
+using Microsoft.AspNetCore.SignalR.Client;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Muthur.Clients;
 using Muthur.Console;
+using Muthur.Contracts;
 using Muthur.Utilities;
 using Serilog;
 
@@ -61,7 +65,10 @@ try
         logger.LogWarning("Agent did not complete within the timeout.");
     }
 
-    // List documents to confirm ingestion.
+    // Wait for ingestion to complete via SignalR relay, then search.
+    await WaitForIngestionAndSearchAsync(result.AgentId, host, client, logger, cts.Token);
+
+    // List documents to confirm storage.
     var docs = await client.ListDocumentsAsync(cts.Token);
     logger.LogInformation("Documents in store: {Count}", docs.Count);
 
@@ -82,4 +89,70 @@ catch (MuthurApiException ex)
 finally
 {
     await Log.CloseAndFlushAsync();
+}
+
+/// <summary>
+/// Connects to the relay hub, waits for the ingestion-completed event,
+/// then runs a vector search to prove the full pipeline works.
+/// </summary>
+static async Task WaitForIngestionAndSearchAsync(
+    string agentId, IHost host, MuthurApiClient client, Microsoft.Extensions.Logging.ILogger logger, CancellationToken cancellationToken)
+{
+    var ingestionDone = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    // Use a handler from IHttpMessageHandlerFactory so Aspire service discovery
+    // resolves "http://muthur-api" to the actual endpoint.
+    var handlerFactory = host.Services.GetRequiredService<IHttpMessageHandlerFactory>();
+
+    var connection = new HubConnectionBuilder()
+        .WithUrl($"http://muthur-api/v1/relay?agentId={agentId}", options =>
+        {
+            options.HttpMessageHandlerFactory = _ =>
+                handlerFactory.CreateHandler(StartupExtensions.RelayHttpClientName);
+        })
+        .WithAutomaticReconnect()
+        .Build();
+
+    connection.On<RelayEvent>("RelayEvent", relay =>
+    {
+        logger.LogInformation("Relay event: {EventType} — {Message}", relay.EventType, relay.Message);
+
+        if (relay.EventType == RelayEventType.IngestionCompleted)
+            ingestionDone.TrySetResult();
+    });
+
+    try
+    {
+        await connection.StartAsync(cancellationToken);
+        logger.LogInformation("Connected to relay hub — waiting for ingestion to complete...");
+
+        // Wait for ingestion with a timeout. If it takes longer than 3 minutes, move on.
+        using var timeoutCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        timeoutCts.CancelAfter(TimeSpan.FromMinutes(3));
+
+        try
+        {
+            await ingestionDone.Task.WaitAsync(timeoutCts.Token);
+            logger.LogInformation("Ingestion complete — running vector search.");
+        }
+        catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            logger.LogWarning("Ingestion notification timed out — searching anyway.");
+        }
+
+        // Search to demonstrate the full pipeline: extract → store → vectorize → search.
+        var results = await client.SearchDocumentsAsync("key findings", limit: 3, cancellationToken);
+        logger.LogInformation("Search results: {Count} chunks", results.Count);
+
+        foreach (var chunk in results)
+        {
+            logger.LogInformation("  [{Score:F3}] {Title}: {Text}",
+                chunk.Score, chunk.DocumentTitle ?? "untitled",
+                chunk.ChunkText[..Math.Min(chunk.ChunkText.Length, 120)]);
+        }
+    }
+    finally
+    {
+        await connection.DisposeAsync();
+    }
 }

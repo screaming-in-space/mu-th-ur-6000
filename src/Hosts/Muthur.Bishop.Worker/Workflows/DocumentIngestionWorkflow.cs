@@ -8,6 +8,7 @@ namespace Muthur.Bishop.Worker.Workflows;
 /// Child workflow that chunks document text, generates embeddings,
 /// and stores them in Postgres with pgvector. Each step is a Temporal
 /// activity checkpoint - if embedding fails, chunking doesn't re-run.
+/// Notifies the relay hub on completion so clients can react.
 /// </summary>
 [Workflow]
 public class DocumentIngestionWorkflow
@@ -41,6 +42,20 @@ public class DocumentIngestionWorkflow
             new ActivityOptions
             {
                 StartToCloseTimeout = TimeSpan.FromMinutes(2),
+                RetryPolicy = new Temporalio.Common.RetryPolicy
+                {
+                    MaximumAttempts = 3,
+                    InitialInterval = TimeSpan.FromSeconds(2)
+                }
+            });
+
+        // Step 4: Notify relay hub that ingestion is complete.
+        await Workflow.ExecuteActivityAsync(
+            (NotificationActivities act) =>
+                act.NotifyIngestionCompleteAsync(input.AgentId, input.DocumentId),
+            new ActivityOptions
+            {
+                StartToCloseTimeout = TimeSpan.FromSeconds(30),
                 RetryPolicy = new Temporalio.Common.RetryPolicy
                 {
                     MaximumAttempts = 3,

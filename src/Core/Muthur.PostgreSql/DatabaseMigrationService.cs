@@ -18,6 +18,7 @@ public sealed class DatabaseMigrationService(
         var upgrader = DeployChanges.To
             .PostgresqlDatabase(connectionString)
             .WithScriptsEmbeddedInAssembly(typeof(DatabaseMigrationService).Assembly)
+            .WithVariablesDisabled()
             .LogToConsole()
             .Build();
 

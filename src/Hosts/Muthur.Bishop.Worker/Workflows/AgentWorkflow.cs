@@ -10,7 +10,7 @@ namespace Muthur.Bishop.Worker.Workflows;
 /// <summary>
 /// Durable agentic loop. Receives user prompts via signal, runs the LLM,
 /// dispatches tool calls, and loops until the LLM produces a final response.
-/// Stateless - conversation history lives in the signal, not in workflow state.
+/// Each turn builds conversation history locally from the prompt in the signal.
 /// </summary>
 [Workflow]
 public class AgentWorkflow
@@ -33,7 +33,7 @@ public class AgentWorkflow
             Workflow.Logger.LogInformation("Processing prompt (turn {Turn}): {Prompt}",
                 _turnCount, signal.Content[..Math.Min(signal.Content.Length, 100)]);
 
-            _lastResponse = await ProcessPromptAsync(signal, input.SystemPrompt);
+            _lastResponse = await ProcessPromptAsync(signal, input.AgentId, input.SystemPrompt);
             _isProcessing = false;
             _turnCount++;
 
@@ -51,7 +51,7 @@ public class AgentWorkflow
     }
 
     /// <summary>The agentic loop: LLM → tool calls → LLM → ... → final response.</summary>
-    private async Task<string> ProcessPromptAsync(PromptSignal signal, string? defaultSystemPrompt)
+    private async Task<string> ProcessPromptAsync(PromptSignal signal, string agentId, string? defaultSystemPrompt)
     {
         var systemPrompt = signal.SystemPrompt ?? defaultSystemPrompt
             ?? "You are MU-TH-UR 6000, a helpful AI assistant. You have tools available. Use them when appropriate.";
@@ -112,7 +112,7 @@ public class AgentWorkflow
                 // Runs independently - doesn't block the conversation or die with ContinueAsNew.
                 if (toolCall.Name == "store_document")
                 {
-                    await TryStartIngestionAsync(toolCall.Arguments, toolResult);
+                    await TryStartIngestionAsync(agentId, toolCall.Arguments, toolResult);
                 }
             }
 
@@ -133,7 +133,7 @@ public class AgentWorkflow
     /// Starts DocumentIngestionWorkflow as a fire-and-forget child workflow.
     /// ParentClosePolicy.Abandon ensures ingestion survives ContinueAsNew.
     /// </summary>
-    private static async Task TryStartIngestionAsync(string toolArguments, string toolResult)
+    private static async Task TryStartIngestionAsync(string agentId, string toolArguments, string toolResult)
     {
         StoreDocumentResult? parsedResult = null;
 
@@ -144,13 +144,17 @@ public class AgentWorkflow
             if (args is null || parsedResult?.DocumentId is null) return;
 
             var input = new DocumentIngestionInput(
+                agentId,
                 parsedResult.DocumentId.Value,
                 args.SourcePath ?? "",
                 args.Text ?? "",
                 args.PageCount,
                 args.Metadata ?? []);
 
-            await Workflow.ExecuteChildWorkflowAsync(
+            // Fire-and-forget: StartChildWorkflowAsync returns after the child is scheduled,
+            // not after it completes. The agent conversation continues immediately.
+            // ParentClosePolicy.Abandon ensures ingestion survives ContinueAsNew.
+            await Workflow.StartChildWorkflowAsync(
                 (DocumentIngestionWorkflow wf) => wf.RunAsync(input),
                 new ChildWorkflowOptions
                 {

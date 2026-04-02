@@ -25,6 +25,11 @@ builder.AddAgentEmbeddingGenerator();
 builder.Services.AddSingleton<DocumentStoreHandler>();
 builder.Services.AddSingleton<ToolRegistry>();
 
+// Named HTTP client for relay notifications — resolves via Aspire service discovery.
+// Named (not typed) because AddScopedActivities owns the registration of NotificationActivities.
+builder.Services.AddHttpClient(NotificationActivities.HttpClientName, c =>
+    c.BaseAddress = new Uri("http://muthur-api"));
+
 var temporalHost = builder.Configuration.GetConnectionString("muthur-temporal-dev")
     ?? builder.Configuration["Temporal:Address"]
     ?? "localhost:7233";
@@ -40,7 +45,8 @@ builder.Services
     .AddWorkflow<DocumentIngestionWorkflow>()
     .AddScopedActivities<LlmActivities>()
     .AddScopedActivities<ToolActivities>()
-    .AddScopedActivities<IngestionActivities>();
+    .AddScopedActivities<IngestionActivities>()
+    .AddScopedActivities<NotificationActivities>();
 
 var host = builder.Build();
 
