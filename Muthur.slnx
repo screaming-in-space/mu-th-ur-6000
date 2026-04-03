@@ -44,6 +44,9 @@
     <Project Path="src/Core/Muthur.Tools/Muthur.Tools.csproj" />
     <Project Path="src/Core/Muthur.Tools.Tests/Muthur.Tools.Tests.csproj" />
   </Folder>
+  <Folder Name="/src/Benchmarks/">
+    <Project Path="src/Benchmarks/Muthur.Tools.Benchmarks/Muthur.Tools.Benchmarks.csproj" />
+  </Folder>
   <Folder Name="/src/Hosts/">
     <Project Path="src/Hosts/Muthur.Api/Muthur.Api.csproj" />
     <Project Path="src/Hosts/Muthur.Bishop.Worker/Muthur.Bishop.Worker.csproj" />
