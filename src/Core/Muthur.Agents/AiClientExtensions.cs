@@ -6,7 +6,7 @@ using OpenAI;
 
 namespace Muthur.Agents;
 
-public static class AiClientExtensions
+public static class AIClientExtensions
 {
     /// <summary>
     /// Registers an <see cref="IChatClient"/> using the M.E.AI pipeline.
@@ -125,7 +125,9 @@ public static class AiClientExtensions
     {
         var trimmed = endpoint.TrimEnd('/');
         if (!trimmed.EndsWith("/v1", StringComparison.OrdinalIgnoreCase))
+        {
             trimmed += "/v1";
+        }
 
         return new Uri(trimmed);
     }

@@ -28,9 +28,13 @@ public static class LoggingExtensions
                 .Enrich.FromLogContext();
 
             if (useJson)
+            {
                 config.WriteTo.Console(new CompactJsonFormatter());
+            }
             else
+            {
                 config.WriteTo.Console(outputTemplate: OutputTemplate, theme: AnsiConsoleTheme.Code);
+            }
 
             var otlpEndpoint = builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
             if (!string.IsNullOrWhiteSpace(otlpEndpoint))
