@@ -139,7 +139,3 @@ All versions are pinned centrally in `Directory.Packages.props`.
 | `Aspire.Npgsql` | 13.2.1 | Postgres via Aspire |
 | `Aspire.StackExchange.Redis.DistributedCaching` | 13.2.1 | Redis cache via Aspire |
 | `OpenTelemetry.Extensions.Hosting` | 1.15.1 | Custom traces + metrics |
-
-## License
-
-MIT
