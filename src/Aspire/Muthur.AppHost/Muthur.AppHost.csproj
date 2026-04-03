@@ -21,6 +21,7 @@
     <ProjectReference Include="..\..\Hosts\Muthur.Api\Muthur.Api.csproj" />
     <ProjectReference Include="..\..\Hosts\Muthur.Bishop.Worker\Muthur.Bishop.Worker.csproj" />
     <ProjectReference Include="..\..\Apps\Muthur.Console\Muthur.Console.csproj" />
+    <ProjectReference Include="..\Muthur.ServiceDefaults\Muthur.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

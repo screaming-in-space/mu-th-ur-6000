@@ -22,8 +22,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\Muthur.Logging\Muthur.Logging.csproj" />
-    <ProjectReference Include="..\Muthur.Telemetry\Muthur.Telemetry.csproj" />
+    <ProjectReference Include="..\..\Core\Muthur.Logging\Muthur.Logging.csproj" />
+    <ProjectReference Include="..\..\Core\Muthur.Telemetry\Muthur.Telemetry.csproj" />
   </ItemGroup>
 
 </Project>
