@@ -1,7 +1,7 @@
 using Aspire.Hosting.ApplicationModel;
 using Microsoft.Extensions.DependencyInjection;
 
-namespace Aspire.Hosting;
+namespace Aspire.Hosting.LMStudio;
 
 public static class LMStudioResourceBuilderExtensions
 {

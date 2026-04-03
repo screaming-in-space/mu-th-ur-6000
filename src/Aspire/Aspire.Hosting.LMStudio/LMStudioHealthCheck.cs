@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Diagnostics.HealthChecks;
 
-namespace Aspire.Hosting;
+namespace Aspire.Hosting.LMStudio;
 
 /// <summary>
 /// Health check for an externally-managed LM Studio instance.

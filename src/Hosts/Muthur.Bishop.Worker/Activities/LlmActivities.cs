@@ -85,10 +85,18 @@ public class LlmActivities(ILogger<LlmActivities> logger, IChatClient chatClient
         // Extract tool calls from the response.
         var toolCalls = response.Messages
             .SelectMany(m => m.Contents.OfType<FunctionCallContent>())
-            .Select(fc => new ToolCallRequest(
-                fc.CallId ?? Guid.NewGuid().ToString(),
-                fc.Name,
-                System.Text.Json.JsonSerializer.Serialize(fc.Arguments)))
+            .Select(fc =>
+            {
+                if (string.IsNullOrEmpty(fc.CallId))
+                {
+                    throw new InvalidOperationException($"LLM returned tool call '{fc.Name}' without a CallId — cannot track tool result");
+                }
+
+                return new ToolCallRequest(
+                    fc.CallId,
+                    fc.Name,
+                    System.Text.Json.JsonSerializer.Serialize(fc.Arguments));
+            })
             .ToArray();
 
         var textContent = string.Join("", response.Messages

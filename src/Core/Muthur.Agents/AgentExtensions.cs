@@ -1,8 +1,9 @@
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
-namespace Muthur.Utilities;
+namespace Muthur.Agents;
 
-public static class UtilityExtensions
+public static class AgentExtensions
 {
     /// <summary>
     /// Registers <see cref="AgentRunner"/> for DI injection.

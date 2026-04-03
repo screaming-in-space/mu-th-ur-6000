@@ -11,17 +11,19 @@ namespace Muthur.Tools.Handlers;
 /// </summary>
 public static class PdfHandler
 {
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
-
     public static Task<string> ExtractTextAsync(string arguments, CancellationToken cancellationToken = default)
     {
-        var args = JsonSerializer.Deserialize<PdfExtractArgs>(arguments, JsonOptions)
+        var args = JsonSerializer.Deserialize<ExtractPdfArgs>(arguments, SerializerDefaults.CaseInsensitive)
             ?? throw new ArgumentException("Invalid PDF extraction arguments");
+
+        if (string.IsNullOrWhiteSpace(args.FilePath))
+        {
+            throw new ArgumentException("FilePath is required for PDF extraction");
+        }
 
         if (!File.Exists(args.FilePath))
         {
-            return Task.FromResult(JsonSerializer.Serialize(new PdfExtractionResult(
-                $"File not found: {args.FilePath}", 0, new())));
+            throw new FileNotFoundException($"PDF file not found: {args.FilePath}", args.FilePath);
         }
 
         using var document = PdfDocument.Open(args.FilePath);
@@ -49,6 +51,4 @@ public static class PdfHandler
 
         return Task.FromResult(JsonSerializer.Serialize(result));
     }
-
-    private sealed record PdfExtractArgs(string FilePath);
 }

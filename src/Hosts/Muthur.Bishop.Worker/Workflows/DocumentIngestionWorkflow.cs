@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using Muthur.Bishop.Worker.Activities;
 using Muthur.Contracts;
 using Temporalio.Workflows;
@@ -21,7 +22,12 @@ public class DocumentIngestionWorkflow
             (IngestionActivities act) => act.ChunkTextAsync(input.Text),
             new ActivityOptions { StartToCloseTimeout = TimeSpan.FromMinutes(1) });
 
-        if (chunks.Length == 0) return;
+        if (chunks.Length == 0)
+        {
+            Workflow.Logger.LogWarning("No chunks produced for document {DocumentId} — text may be empty or unparseable",
+                input.DocumentId);
+            return;
+        }
 
         // Step 2: Generate embeddings for all chunks.
         var embeddings = await Workflow.ExecuteActivityAsync(

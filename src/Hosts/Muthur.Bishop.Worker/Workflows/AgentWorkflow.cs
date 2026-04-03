@@ -102,7 +102,7 @@ public class AgentWorkflow
                 // If store_document, enrich arguments with cached extraction text
                 // so the LLM never carries document content.
                 var arguments = toolCall.Arguments;
-                if (toolCall.Name == "store_document")
+                if (toolCall.Name == AgentConstants.ToolStoreDocument)
                 {
                     arguments = EnrichStoreArguments(arguments, extractions);
                 }
@@ -122,7 +122,7 @@ public class AgentWorkflow
 
                 // Cache extraction results; send only a summary to the LLM.
                 var llmResult = toolResult;
-                if (toolCall.Name == "extract_pdf_text")
+                if (toolCall.Name == AgentConstants.ToolExtractPdf)
                 {
                     llmResult = CacheExtraction(toolResult, toolCall.Arguments, extractions);
                 }
@@ -134,7 +134,7 @@ public class AgentWorkflow
                     ToolCallId: toolCall.Id));
 
                 // When a document is stored: notify the client, then fork ingestion.
-                if (toolCall.Name == "store_document")
+                if (toolCall.Name == AgentConstants.ToolStoreDocument)
                 {
                     await EmitRelayEventAsync(agentId, RelayEventType.DocumentStored,
                         "Document stored in Postgres.",
@@ -159,8 +159,8 @@ public class AgentWorkflow
     {
         try
         {
-            var extraction = JsonSerializer.Deserialize<PdfExtractionResult>(toolResult, JsonOptions);
-            var args = JsonSerializer.Deserialize<ExtractPdfArgs>(toolArguments, JsonOptions);
+            var extraction = JsonSerializer.Deserialize<PdfExtractionResult>(toolResult, SerializerDefaults.CaseInsensitive);
+            var args = JsonSerializer.Deserialize<ExtractPdfArgs>(toolArguments, SerializerDefaults.CaseInsensitive);
             if (extraction is null || args?.FilePath is null) return toolResult;
 
             extractions[args.FilePath] = extraction;
@@ -175,8 +175,9 @@ public class AgentWorkflow
                 Message = "Text extracted successfully. Call store_document to persist."
             });
         }
-        catch
+        catch (JsonException ex)
         {
+            Workflow.Logger.LogWarning(ex, "Failed to deserialize extraction result — passing raw result to LLM");
             return toolResult;
         }
     }
@@ -190,7 +191,7 @@ public class AgentWorkflow
     {
         try
         {
-            var args = JsonSerializer.Deserialize<StoreDocumentArgs>(arguments, JsonOptions);
+            var args = JsonSerializer.Deserialize<StoreDocumentArgs>(arguments, SerializerDefaults.CaseInsensitive);
             if (args?.SourcePath is null) return arguments;
 
             // If the LLM already provided text (shouldn't, but defensive), pass through.
@@ -211,8 +212,9 @@ public class AgentWorkflow
                 Metadata = args.Metadata ?? extraction.Metadata
             });
         }
-        catch
+        catch (JsonException ex)
         {
+            Workflow.Logger.LogWarning(ex, "Failed to enrich store_document arguments — passing raw arguments");
             return arguments;
         }
     }
@@ -236,8 +238,8 @@ public class AgentWorkflow
 
         try
         {
-            var args = JsonSerializer.Deserialize<StoreDocumentArgs>(toolArguments);
-            parsedResult = JsonSerializer.Deserialize<StoreDocumentResult>(toolResult);
+            var args = JsonSerializer.Deserialize<StoreDocumentArgs>(toolArguments, SerializerDefaults.CaseInsensitive);
+            parsedResult = JsonSerializer.Deserialize<StoreDocumentResult>(toolResult, SerializerDefaults.CaseInsensitive);
             if (args is null || parsedResult?.DocumentId is null) return;
 
             var input = new DocumentIngestionInput(
@@ -291,21 +293,15 @@ public class AgentWorkflow
     {
         try
         {
-            var result = JsonSerializer.Deserialize<StoreDocumentResult>(toolResult, JsonOptions);
+            var result = JsonSerializer.Deserialize<StoreDocumentResult>(toolResult, SerializerDefaults.CaseInsensitive);
             return result?.DocumentId is { } id
                 ? new() { ["documentId"] = id.ToString() }
                 : null;
         }
-        catch { return null; }
+        catch (JsonException ex)
+        {
+            Workflow.Logger.LogWarning(ex, "Failed to parse document ID from tool result");
+            return null;
+        }
     }
-
-    private static readonly JsonSerializerOptions JsonOptions = new() { PropertyNameCaseInsensitive = true };
-
-    private sealed record ExtractPdfArgs(string? FilePath);
-
-    private sealed record StoreDocumentArgs(
-        string? Title, string? SourcePath, string? Text,
-        int PageCount = 0, Dictionary<string, string>? Metadata = null);
-
-    private sealed record StoreDocumentResult(Guid? DocumentId);
 }

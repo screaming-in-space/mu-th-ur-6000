@@ -12,10 +12,9 @@ public static class MuthurClientExtensions
         this IServiceCollection services,
         Action<HttpClient> configureClient)
     {
+        services.AddTransient<MuthurErrorHandler>();
         services.AddHttpClient<MuthurApiClient>(configureClient)
             .AddHttpMessageHandler<MuthurErrorHandler>();
-
-        services.AddTransient<MuthurErrorHandler>();
 
         return services;
     }
@@ -28,6 +27,7 @@ public static class MuthurClientExtensions
         this IServiceCollection services,
         Uri baseAddress)
     {
+        services.AddTransient<MuthurErrorHandler>();
         services.AddHttpClient<MuthurApiClient>(client => client.BaseAddress = baseAddress)
             .ConfigurePrimaryHttpMessageHandler(() => new SocketsHttpHandler
             {
@@ -37,8 +37,6 @@ public static class MuthurClientExtensions
             })
             .SetHandlerLifetime(Timeout.InfiniteTimeSpan)
             .AddHttpMessageHandler<MuthurErrorHandler>();
-
-        services.AddTransient<MuthurErrorHandler>();
 
         return services;
     }

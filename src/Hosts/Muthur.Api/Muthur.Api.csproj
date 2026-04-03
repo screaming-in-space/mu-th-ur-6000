@@ -12,6 +12,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\Aspire\Muthur.ServiceDefaults\Muthur.ServiceDefaults.csproj" />
+    <ProjectReference Include="..\..\Core\Muthur.Agents\Muthur.Agents.csproj" />
     <ProjectReference Include="..\..\Core\Muthur.Contracts\Muthur.Contracts.csproj" />
     <ProjectReference Include="..\..\Core\Muthur.Data\Muthur.Data.csproj" />
   </ItemGroup>

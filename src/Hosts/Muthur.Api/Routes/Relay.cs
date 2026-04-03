@@ -25,6 +25,11 @@ public static class Relay
         IHubContext<MuthurHub> hubContext,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(agentId) || agentId.Length > 16)
+        {
+            return Results.BadRequest(new { Error = "Invalid agentId" });
+        }
+
         await hubContext.Clients.Group(agentId)
             .SendAsync(MuthurHub.EventName, relay, cancellationToken);
 

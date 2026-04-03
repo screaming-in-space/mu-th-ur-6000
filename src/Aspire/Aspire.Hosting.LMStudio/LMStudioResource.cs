@@ -1,6 +1,6 @@
 using Aspire.Hosting.ApplicationModel;
 
-namespace Aspire.Hosting;
+namespace Aspire.Hosting.LMStudio;
 
 /// <summary>
 /// Represents an externally-managed LM Studio instance exposing an OpenAI-compatible API.

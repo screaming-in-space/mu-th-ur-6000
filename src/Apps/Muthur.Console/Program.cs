@@ -1,5 +1,4 @@
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Http;
 using Microsoft.Extensions.Logging;
 using Muthur.Clients;
 using Muthur.Console;

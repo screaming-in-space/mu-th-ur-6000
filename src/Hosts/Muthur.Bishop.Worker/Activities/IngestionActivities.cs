@@ -90,6 +90,12 @@ public class IngestionActivities(
     [Activity]
     public async Task StoreChunksAsync(Guid documentId, TextChunk[] chunks, float[][] embeddings)
     {
+        if (chunks.Length != embeddings.Length)
+        {
+            throw new InvalidOperationException(
+                $"Chunk/embedding count mismatch: {chunks.Length} chunks but {embeddings.Length} embeddings for document {documentId}");
+        }
+
         var cancellationToken = ActivityExecutionContext.Current.CancellationToken;
         logger.LogInformation("Storing {ChunkCount} chunks for document {DocumentId}", chunks.Length, documentId);
         await repository.StoreChunksAsync(documentId, chunks, embeddings, cancellationToken);

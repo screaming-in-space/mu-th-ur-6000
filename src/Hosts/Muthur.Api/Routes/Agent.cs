@@ -70,7 +70,7 @@ public static class AgentRoutes
         {
             span?.RecordError(ex);
             return Results.Problem(
-                detail: ex.Message,
+                detail: "Temporal service is unavailable",
                 statusCode: StatusCodes.Status502BadGateway,
                 title: "Temporal unavailable");
         }
@@ -82,6 +82,16 @@ public static class AgentRoutes
         ITemporalClient temporal,
         CancellationToken cancellationToken)
     {
+        if (!IsValidAgentId(agentId))
+        {
+            return Results.BadRequest(new { Error = "Invalid agentId format" });
+        }
+
+        if (string.IsNullOrWhiteSpace(request.Content))
+        {
+            return Results.BadRequest(new { Error = "Prompt content is required" });
+        }
+
         var handle = temporal.GetWorkflowHandle(AgentConstants.WorkflowId(agentId));
 
         try
@@ -100,10 +110,10 @@ public static class AgentRoutes
         {
             return Results.NotFound(new { Error = $"Agent session '{agentId}' not found" });
         }
-        catch (RpcException ex)
+        catch (RpcException)
         {
             return Results.Problem(
-                detail: ex.Message,
+                detail: "Temporal service is unavailable",
                 statusCode: StatusCodes.Status502BadGateway,
                 title: "Temporal unavailable");
         }
@@ -114,6 +124,11 @@ public static class AgentRoutes
         ITemporalClient temporal,
         CancellationToken cancellationToken)
     {
+        if (!IsValidAgentId(agentId))
+        {
+            return Results.BadRequest(new { Error = "Invalid agentId format" });
+        }
+
         var handle = temporal.GetWorkflowHandle(AgentConstants.WorkflowId(agentId));
 
         try
@@ -130,12 +145,15 @@ public static class AgentRoutes
         {
             return Results.NotFound(new { Error = $"Agent session '{agentId}' not found" });
         }
-        catch (RpcException ex)
+        catch (RpcException)
         {
             return Results.Problem(
-                detail: ex.Message,
+                detail: "Temporal service is unavailable",
                 statusCode: StatusCodes.Status502BadGateway,
                 title: "Temporal unavailable");
         }
     }
+
+    private static bool IsValidAgentId(string agentId) =>
+        !string.IsNullOrWhiteSpace(agentId) && agentId.Length <= 16;
 }

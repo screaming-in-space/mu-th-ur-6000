@@ -2,7 +2,7 @@ using Microsoft.Extensions.Logging;
 using Muthur.Clients;
 using Muthur.Contracts;
 
-namespace Muthur.Utilities;
+namespace Muthur.Agents;
 
 /// <summary>
 /// Orchestrates a single agent job: create session, send prompt, poll until done.

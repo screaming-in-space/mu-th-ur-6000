@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
+using Muthur.Contracts;
 using Muthur.Tools.Handlers;
 
 namespace Muthur.Tools;
@@ -18,7 +19,7 @@ public sealed class ToolRegistry
     public ToolRegistry(ILogger<ToolRegistry> logger, DocumentStoreHandler documentStoreHandler)
     {
         // PDF text extraction.
-        _handlers["extract_pdf_text"] = PdfHandler.ExtractTextAsync;
+        _handlers[AgentConstants.ToolExtractPdf] = PdfHandler.ExtractTextAsync;
         _tools.Add(AIFunctionFactory.Create(
             [Description("Extract text content and metadata from a PDF file. Returns the full text, page count, and document metadata.")]
             async (
@@ -29,11 +30,11 @@ public sealed class ToolRegistry
                 var args = JsonSerializer.Serialize(new { FilePath = filePath });
                 return await PdfHandler.ExtractTextAsync(args, cancellationToken).ConfigureAwait(false);
             },
-            "extract_pdf_text"));
+            AgentConstants.ToolExtractPdf));
 
         // Document storage - persists extracted text to Postgres.
         // The LLM provides metadata only; the workflow injects cached extraction text.
-        _handlers["store_document"] = documentStoreHandler.StoreAsync;
+        _handlers[AgentConstants.ToolStoreDocument] = documentStoreHandler.StoreAsync;
         _tools.Add(AIFunctionFactory.Create(
             [Description("Store a previously extracted document in the knowledge base for future search. " +
                          "Call this after extract_pdf_text to persist the document. " +
@@ -54,7 +55,7 @@ public sealed class ToolRegistry
                 });
                 return await documentStoreHandler.StoreAsync(args, cancellationToken).ConfigureAwait(false);
             },
-            "store_document"));
+            AgentConstants.ToolStoreDocument));
     }
 
     public IReadOnlyList<AITool> GetTools() => _tools;

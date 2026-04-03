@@ -1,3 +1,4 @@
+using Aspire.Hosting.LMStudio;
 using Aspire.Hosting.Temporal;
 
 var builder = DistributedApplication.CreateBuilder(args);

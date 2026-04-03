@@ -67,9 +67,21 @@ public static class DocumentRoutes
         IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator,
         CancellationToken cancellationToken)
     {
+        if (string.IsNullOrWhiteSpace(q))
+        {
+            return Results.BadRequest(new { Error = "Query parameter 'q' is required" });
+        }
+
+        if (q.Length > 1000)
+        {
+            return Results.BadRequest(new { Error = "Query must not exceed 1000 characters" });
+        }
+
+        var clampedLimit = Math.Clamp(limit ?? 5, 1, 100);
+
         var embedding = await embeddingGenerator.GenerateAsync(q, cancellationToken: cancellationToken);
         var queryVector = embedding.Vector.ToArray();
-        var results = await repo.SearchSimilarAsync(queryVector, limit ?? 5, cancellationToken);
+        var results = await repo.SearchSimilarAsync(queryVector, clampedLimit, cancellationToken);
         return Results.Ok(results);
     }
 }

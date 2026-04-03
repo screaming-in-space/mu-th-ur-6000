@@ -4,7 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using OpenAI;
 
-namespace Muthur.ServiceDefaults;
+namespace Muthur.Agents;
 
 public static class AiClientExtensions
 {
@@ -70,7 +70,7 @@ public static class AiClientExtensions
     /// Parses the LM Studio connection string injected by Aspire:
     /// <c>Endpoint=...;Model=...;EmbeddingModel=...</c>
     /// </summary>
-    private static (string? Endpoint, string? Model, string? EmbeddingModel) ParseLMStudioConnectionString(
+    internal static (string? Endpoint, string? Model, string? EmbeddingModel) ParseLMStudioConnectionString(
         IHostApplicationBuilder builder)
     {
         var connectionString = builder.Configuration.GetConnectionString("muthur-lmstudio");
@@ -98,7 +98,9 @@ public static class AiClientExtensions
     {
         var options = new OpenAIClientOptions();
         if (endpoint is not null)
+        {
             options.Endpoint = NormalizeEndpoint(endpoint);
+        }
 
         var client = new OpenAIClient(new System.ClientModel.ApiKeyCredential(apiKey), options);
         return client.GetChatClient(model).AsIChatClient();
