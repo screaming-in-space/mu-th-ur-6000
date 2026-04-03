@@ -4,7 +4,7 @@ A durable AI agent that runs inside [Temporal](https://temporal.io), calls tools
 
 Built with the Temporal .NET SDK, [Microsoft.Extensions.AI](https://learn.microsoft.com/en-us/dotnet/ai/ai-extensions), Postgres + pgvector, Redis, and .NET Aspire. Ships with two tools: PDF text extraction via [PdfPig](https://github.com/UglyToad/PdfPig) and document storage with vector search.
 
-Companion repo to the [threadunsafe.dev article](https://threadunsafe.dev/articles/inference/temporal-ai-agent).
+Companion repo to the [threadunsafe.dev article](https://threadunsafe.dev/articles/agents/temporal-ai-agent).
 
 ## Quick start
 
