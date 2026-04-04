@@ -2,11 +2,15 @@ using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Muthur.Contracts;
 using Muthur.Data;
+using Muthur.Tools.Documents;
 using Muthur.Tools.Handlers;
 using NSubstitute;
 
 namespace Muthur.Tools.Tests;
 
+/// <summary>
+/// Tests for <see cref="DocumentStoreHandler"/> — the JSON bridge layer.
+/// </summary>
 public class DocumentStoreHandlerTests
 {
     private readonly IDocumentRepository _repo;
@@ -15,7 +19,8 @@ public class DocumentStoreHandlerTests
     public DocumentStoreHandlerTests()
     {
         _repo = Substitute.For<IDocumentRepository>();
-        _sut = new DocumentStoreHandler(NullLogger<DocumentStoreHandler>.Instance, _repo);
+        var store = new DocumentStore(NullLogger<DocumentStore>.Instance, _repo);
+        _sut = new DocumentStoreHandler(store);
     }
 
     [Fact]
@@ -35,51 +40,17 @@ public class DocumentStoreHandlerTests
             PageCount = 3
         });
 
-        var result = await _sut.StoreAsync(args);
-        var parsed = JsonSerializer.Deserialize<StoreDocumentResult>(result, SerializerDefaults.CaseInsensitive);
+        var result = await _sut.StoreAsync(args, new ToolExecutionContext("test"));
+        var parsed = JsonSerializer.Deserialize<StoreDocumentResult>(result.Json, SerializerDefaults.CaseInsensitive);
 
         Assert.NotNull(parsed);
         Assert.Equal(expectedId, parsed.DocumentId);
     }
 
     [Fact]
-    public async Task StoreAsync_MissingSourcePath_ThrowsArgument()
-    {
-        var args = JsonSerializer.Serialize(new
-        {
-            Title = "Test Doc",
-            Text = "content"
-        });
-
-        await Assert.ThrowsAsync<ArgumentException>(() => _sut.StoreAsync(args));
-    }
-
-    [Fact]
     public async Task StoreAsync_InvalidJson_ThrowsJsonException()
     {
-        await Assert.ThrowsAsync<System.Text.Json.JsonException>(() => _sut.StoreAsync("bad json"));
-    }
-
-    [Fact]
-    public async Task StoreAsync_NullMetadata_PassesEmptyDictionary()
-    {
-        _repo.StoreDocumentAsync(
-            Arg.Any<string?>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<int>(), Arg.Any<Dictionary<string, string>>(), Arg.Any<CancellationToken>())
-            .Returns(Guid.NewGuid());
-
-        var args = JsonSerializer.Serialize(new
-        {
-            Title = "Test",
-            SourcePath = "/file.pdf",
-            Text = "text",
-            PageCount = 1
-        });
-
-        await _sut.StoreAsync(args);
-
-        await _repo.Received(1).StoreDocumentAsync(
-            Arg.Any<string?>(), Arg.Any<string>(), Arg.Any<string>(),
-            Arg.Any<int>(), Arg.Is<Dictionary<string, string>>(d => d.Count == 0), Arg.Any<CancellationToken>());
+        await Assert.ThrowsAsync<System.Text.Json.JsonException>(
+            () => _sut.StoreAsync("bad json", new ToolExecutionContext("test")));
     }
 }

@@ -1,65 +1,59 @@
-using System.ComponentModel;
-using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging;
-using Muthur.Contracts;
-using Muthur.Tools.Handlers;
+using Muthur.Telemetry;
 
 namespace Muthur.Tools;
 
 /// <summary>
-/// Central registry for agent tools. Maps tool names to handlers and provides
-/// M.E.AI tool definitions for the LLM to discover available capabilities.
+/// Central registry for agent tools. Auto-collects all <see cref="IToolHandler"/>
+/// implementations via DI. Provides dispatch with execution context and tracing.
 /// </summary>
 public sealed class ToolRegistry
 {
-    private readonly Dictionary<string, Func<string, CancellationToken, Task<string>>> _handlers = [];
+    private readonly Dictionary<string, Func<string, ToolExecutionContext, Task<ToolResult>>> _handlers = [];
     private readonly List<AITool> _tools = [];
+    private readonly ILogger<ToolRegistry> _logger;
 
-    public ToolRegistry(ILogger<ToolRegistry> logger, DocumentStoreHandler documentStoreHandler)
+    public ToolRegistry(ILogger<ToolRegistry> logger, IEnumerable<IToolHandler> handlers)
     {
-        // PDF text extraction.
-        _handlers[AgentConstants.ToolExtractPdf] = PdfHandler.ExtractTextAsync;
-        _tools.Add(AIFunctionFactory.Create(
-            [Description("Extract text content and metadata from a PDF file. Returns the full text, page count, and document metadata.")]
-            async (
-                [Description("Absolute path to the PDF file")] string filePath,
-                CancellationToken cancellationToken
-            ) =>
-            {
-                var args = JsonSerializer.Serialize(new { FilePath = filePath });
-                return await PdfHandler.ExtractTextAsync(args, cancellationToken).ConfigureAwait(false);
-            },
-            AgentConstants.ToolExtractPdf));
+        _logger = logger;
 
-        // Document storage - persists extracted text to Postgres.
-        // The LLM provides metadata only; the workflow injects cached extraction text.
-        _handlers[AgentConstants.ToolStoreDocument] = documentStoreHandler.StoreAsync;
-        _tools.Add(AIFunctionFactory.Create(
-            [Description("Store a previously extracted document in the knowledge base for future search. " +
-                         "Call this after extract_pdf_text to persist the document. " +
-                         "The extracted text is injected automatically — only provide metadata. " +
-                         "Returns the stored document ID.")]
-            async (
-                [Description("Document title")] string title,
-                [Description("Original file path (same path used in extract_pdf_text)")] string sourcePath,
-                [Description("Number of pages in the document")] int pageCount,
-                CancellationToken cancellationToken
-            ) =>
-            {
-                var args = JsonSerializer.Serialize(new
-                {
-                    Title = title,
-                    SourcePath = sourcePath,
-                    PageCount = pageCount,
-                });
-                return await documentStoreHandler.StoreAsync(args, cancellationToken).ConfigureAwait(false);
-            },
-            AgentConstants.ToolStoreDocument));
+        foreach (var handler in handlers)
+        {
+            _tools.Add(handler.Register(_handlers));
+        }
+
+        _logger.LogInformation("ToolRegistry initialized — {ToolCount} tools registered: {Tools}",
+            _tools.Count, string.Join(", ", _handlers.Keys));
     }
 
     public IReadOnlyList<AITool> GetTools() => _tools;
 
-    public Func<string, CancellationToken, Task<string>>? GetHandler(string name) =>
+    public Func<string, ToolExecutionContext, Task<ToolResult>>? GetHandler(string name) =>
         _handlers.GetValueOrDefault(name);
+
+    /// <summary>
+    /// Executes a tool by name with distributed tracing and metrics.
+    /// Exceptions propagate to the caller — Temporal's retry policy handles failures.
+    /// </summary>
+    public async Task<ToolResult> ExecuteAsync(string toolName, string arguments, ToolExecutionContext context)
+    {
+        var handler = _handlers.GetValueOrDefault(toolName)
+            ?? throw new InvalidOperationException($"Unknown tool: {toolName}");
+
+        using var span = MuthurTrace.StartSpan($"tool.{toolName}")
+            ?.WithTag("tool.name", toolName)
+            ?.WithTag("tool.agent_id", context.AgentId)
+            ?.WithTag("tool.call_id", context.CallId);
+
+        var result = await handler(arguments, context).ConfigureAwait(false);
+
+        MuthurMetrics.ToolExecutions.Add(1,
+            new KeyValuePair<string, object?>("tool.name", toolName));
+
+        span?.WithTag("tool.result_length", result.Json.Length)
+            ?.SetSuccess();
+
+        return result;
+    }
 }

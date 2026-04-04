@@ -1,5 +1,4 @@
 using Microsoft.Extensions.Logging;
-using Muthur.Telemetry;
 using Muthur.Tools;
 using Temporalio.Activities;
 
@@ -17,15 +16,12 @@ public class ToolActivities(ILogger<ToolActivities> logger, ToolRegistry toolReg
         var cancellationToken = ActivityExecutionContext.Current.CancellationToken;
         logger.LogInformation("Executing tool: {ToolName}", toolName);
 
-        var handler = toolRegistry.GetHandler(toolName)
-            ?? throw new InvalidOperationException($"Unknown tool: {toolName}");
+        var context = new ToolExecutionContext(
+            ToolName: toolName,
+            CancellationToken: cancellationToken);
 
-        MuthurMetrics.ToolExecutions.Add(1,
-            new KeyValuePair<string, object?>("tool.name", toolName));
+        var result = await toolRegistry.ExecuteAsync(toolName, arguments, context);
 
-        var result = await handler(arguments, cancellationToken);
-
-        logger.LogInformation("Tool {ToolName} completed — {ResultLength} chars", toolName, result.Length);
-        return result;
+        return result.Json;
     }
 }

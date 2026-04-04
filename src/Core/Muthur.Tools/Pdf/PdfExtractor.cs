@@ -23,7 +23,7 @@ public static class PdfExtractor
     /// </summary>
     /// <param name="filePath">Absolute path to the PDF file.</param>
     /// <returns>Extracted text, page count, and document metadata.</returns>
-    public static PdfExtractionResult Extract(string filePath)
+    public static PdfExtractionResult Extract(string filePath, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(filePath))
         {
@@ -43,8 +43,9 @@ public static class PdfExtractor
 
         ExtractMetadata(document.Information, metadata);
 
-        foreach (Page page in document.GetPages())
+        foreach (var page in document.GetPages())
         {
+            cancellationToken.ThrowIfCancellationRequested();
             AppendPageHeader(buffer, page.Number);
             AppendLine(buffer, page.Text);
             AppendNewLine(buffer);
@@ -55,7 +56,7 @@ public static class PdfExtractor
     }
 
     private static void ExtractMetadata(
-        UglyToad.PdfPig.Content.DocumentInformation info,
+        DocumentInformation info,
         Dictionary<string, string> metadata)
     {
         if (info.Title is not null) { metadata["title"] = info.Title; }

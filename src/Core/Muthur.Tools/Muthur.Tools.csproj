@@ -13,6 +13,7 @@
   <ItemGroup>
     <ProjectReference Include="..\Muthur.Contracts\Muthur.Contracts.csproj" />
     <ProjectReference Include="..\Muthur.Data\Muthur.Data.csproj" />
+    <ProjectReference Include="..\Muthur.Telemetry\Muthur.Telemetry.csproj" />
   </ItemGroup>
 
 </Project>

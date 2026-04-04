@@ -3,6 +3,8 @@ using Microsoft.Extensions.Logging;
 using Muthur.Bishop.Worker.Activities;
 using Muthur.Contracts;
 using Muthur.Telemetry;
+using Muthur.Tools.Documents;
+using Muthur.Tools.Pdf;
 using Temporalio.Workflows;
 
 namespace Muthur.Bishop.Worker.Workflows;
@@ -160,7 +162,7 @@ public class AgentWorkflow
         try
         {
             var extraction = JsonSerializer.Deserialize<PdfExtractionResult>(toolResult, SerializerDefaults.CaseInsensitive);
-            var args = JsonSerializer.Deserialize<ExtractPdfArgs>(toolArguments, SerializerDefaults.CaseInsensitive);
+            var args = JsonSerializer.Deserialize<ExtractPdfJob>(toolArguments, SerializerDefaults.CaseInsensitive);
             if (extraction is null || args?.FilePath is null) return toolResult;
 
             extractions[args.FilePath] = extraction;
@@ -191,7 +193,7 @@ public class AgentWorkflow
     {
         try
         {
-            var args = JsonSerializer.Deserialize<StoreDocumentArgs>(arguments, SerializerDefaults.CaseInsensitive);
+            var args = JsonSerializer.Deserialize<StoreDocumentJob>(arguments, SerializerDefaults.CaseInsensitive);
             if (args?.SourcePath is null) return arguments;
 
             // If the LLM already provided text (shouldn't, but defensive), pass through.
@@ -238,7 +240,7 @@ public class AgentWorkflow
 
         try
         {
-            var args = JsonSerializer.Deserialize<StoreDocumentArgs>(toolArguments, SerializerDefaults.CaseInsensitive);
+            var args = JsonSerializer.Deserialize<StoreDocumentJob>(toolArguments, SerializerDefaults.CaseInsensitive);
             parsedResult = JsonSerializer.Deserialize<StoreDocumentResult>(toolResult, SerializerDefaults.CaseInsensitive);
             if (args is null || parsedResult?.DocumentId is null) return;
 
