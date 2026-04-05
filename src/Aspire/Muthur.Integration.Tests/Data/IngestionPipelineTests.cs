@@ -36,8 +36,9 @@ public sealed class IngestionPipelineTests(MuthurFixture platform)
 
         await repo.StoreChunksAsync(docId, chunks, [embeddingA, embeddingB]);
 
-        // Search with embedding close to A — filter to this document's chunks.
-        var results = await repo.SearchSimilarAsync(embeddingA, limit: 10);
+        // Search with embedding close to A — use a high limit to ensure both chunks
+        // from this document appear despite chunks from other tests in the shared DB.
+        var results = await repo.SearchSimilarAsync(embeddingA, limit: 100);
         var docResults = results.Where(r => r.DocumentId == docId).ToList();
 
         Assert.Equal(2, docResults.Count);
@@ -99,8 +100,7 @@ public sealed class IngestionPipelineTests(MuthurFixture platform)
         var embeddings = chunks.Select(_ => embedding).ToList();
         await repo.StoreChunksAsync(docId, chunks, embeddings);
 
-        // Verify chunks were stored by searching.
-        var results = await repo.SearchSimilarAsync(embedding, limit: 10);
+        var results = await repo.SearchSimilarAsync(embedding, limit: 100);
         var docResults = results.Where(r => r.DocumentId == docId).ToList();
 
         Assert.Equal(5, docResults.Count);

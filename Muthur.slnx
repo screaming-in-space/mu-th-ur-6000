@@ -42,7 +42,7 @@
     <Project Path="src/Core/Muthur.Logging/Muthur.Logging.csproj" />
     <Project Path="src/Core/Muthur.Telemetry/Muthur.Telemetry.csproj" />
     <Project Path="src/Core/Muthur.Tools/Muthur.Tools.csproj" />
-    <Project Path="src/Core/Muthur.Tools.Tests/Muthur.Tools.Tests.csproj" />
+<Project Path="src/Core/Muthur.Tools.Tests/Muthur.Tools.Tests.csproj" />
   </Folder>
   <Folder Name="/src/Benchmarks/">
     <Project Path="src/Benchmarks/Muthur.Tools.Benchmarks/Muthur.Tools.Benchmarks.csproj" />

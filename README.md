@@ -99,10 +99,11 @@ Set via user secrets or environment variables on the Worker:
 
 ## Adding a tool
 
-1. Create a handler class in `Muthur.Tools/Handlers/`
-2. Register it in `ToolRegistry` - `AIFunctionFactory.Create()` for LLM schema + `_handlers` for dispatch
-3. If it needs DI, add constructor injection and register in Worker's `Program.cs`
-4. Done. No changes to `AgentWorkflow` or `ToolActivities`.
+1. Create domain logic and a handler class in `Muthur.Tools/Handlers/` implementing `IToolHandler`
+2. `Register()` returns `ToolRegistration(name, AIFunctionFactory.Create(TypedMethod, name))`
+3. Add tool name constant to `AgentConstants`
+4. Register in `ToolsExtensions.AddMuthurTools()` — ToolRegistry auto-collects via DI
+5. Done. No changes to `AgentWorkflow` or `ToolActivities`.
 
 ## API endpoints
 

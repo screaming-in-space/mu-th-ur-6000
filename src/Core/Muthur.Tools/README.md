@@ -22,7 +22,7 @@ Registry + Dispatch   → ToolRegistry.cs
 
 | Tool | Handler | Domain | Purpose |
 |------|---------|--------|---------|
-| `extract_pdf_text` | `PdfHandler` | `PdfExtractor` | Extract text + metadata from PDF via PdfPig |
+| `pdf_extract_text` | `PdfHandler` | `PdfExtractor` | Extract text + metadata from PDF via PdfPig |
 | `store_document` | `DocumentStoreHandler` | `DocumentStore` | Persist document text to Postgres |
 
 ## Adding a tool
@@ -41,6 +41,10 @@ Registry + Dispatch   → ToolRegistry.cs
 
 ToolRegistry, ToolActivities, and AgentWorkflow don't change.
 
+### Workflow-injected parameters
+
+Some tools receive parameters that the LLM doesn't provide — the workflow injects them (e.g., `store_document` gets `text` and `metadata` from the extraction cache). Use `AIFunctionFactoryOptions.ConfigureParameterBinding` with `ExcludeFromSchema = true` to keep these out of the LLM schema while still binding them from the arguments dictionary at invocation time.
+
 ## Key Types
 
 | Type | Purpose |
@@ -52,9 +56,9 @@ ToolRegistry, ToolActivities, and AgentWorkflow don't change.
 
 ## Dependencies
 
-- `Muthur.Contracts` — shared types (`ExtractPdfArgs`, `StoreDocumentArgs`, `StoreDocumentResult`, `SerializerDefaults`)
+- `Muthur.Contracts` — shared types (`AgentConstants`, `PdfExtractionResult`, `StoreDocumentResult`, `SerializerDefaults`)
 - `Muthur.Data` — `IDocumentRepository` for document storage
 - `Muthur.Telemetry` — `MuthurTrace` spans, `MuthurMetrics` counters
-- `Microsoft.Extensions.AI` — `AIFunctionFactory`, `AIFunction`, `AITool`
+- `Microsoft.Extensions.AI` — `AIFunctionFactory`, `AIFunction`, `AITool`, `AIFunctionFactoryOptions`
 - `CommunityToolkit.HighPerformance` — `ArrayPoolBufferWriter` for PDF extraction
 - `PdfPig` — PDF text extraction

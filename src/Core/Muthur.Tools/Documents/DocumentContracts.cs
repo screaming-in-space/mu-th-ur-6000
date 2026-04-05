@@ -10,6 +10,3 @@ public sealed record StoreDocumentJob(
     string? Text,
     int PageCount = 0,
     Dictionary<string, string>? Metadata = null);
-
-/// <summary>Result from the store_document tool handler.</summary>
-public sealed record StoreDocumentResult(Guid? DocumentId);

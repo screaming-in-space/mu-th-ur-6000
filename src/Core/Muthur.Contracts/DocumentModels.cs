@@ -17,16 +17,12 @@ public sealed record DocumentSummary(
     int PageCount,
     DateTime CreatedAt);
 
-/// <summary>A chunk of document text without its embedding.</summary>
-public sealed record DocumentChunkRecord(
-    Guid Id,
-    Guid DocumentId,
-    int ChunkIndex,
-    string ChunkText);
-
 /// <summary>Vector search result - a chunk ranked by similarity.</summary>
 public sealed record SimilarChunk(
     string ChunkText,
     Guid DocumentId,
     string? DocumentTitle,
     double Score);
+
+/// <summary>Result from the store_document tool handler.</summary>
+public sealed record StoreDocumentResult(Guid? DocumentId);

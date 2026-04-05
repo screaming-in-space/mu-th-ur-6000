@@ -122,12 +122,13 @@ Shared types. Zero dependencies. Referenced by Api, Worker, Data, Tools, and Cli
 | File | Purpose |
 |------|---------|
 | `AgentConstants.cs` | Task queue name, role strings, turn limit, workflow ID factory |
-| `AgentInput.cs` | `AgentWorkflowInput`, `LlmActivityInput/Output`, `ToolCallRequest/Result`, `ConversationMessage` |
+| `AgentInput.cs` | `AgentWorkflowInput`, `LlmActivityInput/Output`, `ToolCallRequest` (dict args), `ConversationMessage` |
 | `AgentSignals.cs` | `PromptSignal`, `AgentState` |
 | `ApiModels.cs` | `CreateSessionRequest/Response`, `SendPromptRequest`, `DocumentContentResponse` |
 | `PdfExtractionResult.cs` | `PdfExtractionResult(Text, PageCount, Metadata)` |
-| `DocumentModels.cs` | `DocumentRecord`, `DocumentSummary`, `DocumentChunkRecord`, `SimilarChunk` |
+| `DocumentModels.cs` | `DocumentRecord`, `DocumentSummary`, `SimilarChunk`, `StoreDocumentResult` |
 | `DocumentIngestionInput.cs` | `DocumentIngestionInput`, `TextChunk` |
+| `ToolResultProcessor.cs` | Pure functions for tool result processing — `CacheExtraction`, `EnrichStoreArguments`, `ParseIngestionInput` |
 
 **Depends on:** nothing
 
@@ -151,7 +152,9 @@ Agent tools. Isolated from the Worker for independent testability.
 
 | File | Purpose |
 |------|---------|
-| `ToolRegistry.cs` | `AIFunctionFactory.Create()` registration + name→handler dispatch |
+| `IToolHandler.cs` | Interface + `ToolRegistration` record — handlers return name + `AIFunction` |
+| `ToolRegistry.cs` | Auto-collects handlers, dispatches via `AIFunction.InvokeAsync` with tracing |
+| `ToolResult.cs` | Dual payload — serialized JSON (Temporal boundary) + typed payload (in-process) |
 | `Handlers/PdfHandler.cs` | PdfPig text extraction - static, no DI |
 | `Handlers/DocumentStoreHandler.cs` | Store document text in Postgres via `IDocumentRepository` |
 
@@ -255,7 +258,7 @@ Console talks to the Api via `Muthur.Clients` - never references Hosts or Aspire
 1. User sends prompt → Temporal (signal)
 2. Temporal dispatches → Doc Worker (workflow)
 3. Doc Worker calls → LLM (activity)
-4. Doc Worker calls → Tool Registry (extract_pdf_text, store_document)
+4. Doc Worker calls → Tool Registry (pdf_extract_text, store_document)
 5. Tool writes document → PostgreSQL
 6. Response returned → User
 ```

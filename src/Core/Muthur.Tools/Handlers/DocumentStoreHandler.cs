@@ -33,12 +33,12 @@ public sealed class DocumentStoreHandler(DocumentStore store) : IToolHandler
     /// metadata from the extraction cache before dispatch.
     /// </summary>
     [Description("Store a previously extracted document in the knowledge base for future search. " +
-                 "Call this after extract_pdf_text to persist the document. " +
+                 "Call this after pdf_extract_text to persist the document. " +
                  "The extracted text is injected automatically — only provide metadata. " +
                  "Returns the stored document ID.")]
     public async Task<StoreDocumentResult> StoreDocumentAsync(
         [Description("Document title")] string title,
-        [Description("Original file path (same path used in extract_pdf_text)")] string sourcePath,
+        [Description("Original file path (same path used in pdf_extract_text)")] string sourcePath,
         [Description("Number of pages in the document")] int pageCount,
         string? text = null,
         Dictionary<string, string>? metadata = null,

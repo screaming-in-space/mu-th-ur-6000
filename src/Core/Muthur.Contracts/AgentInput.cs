@@ -22,12 +22,6 @@ public sealed record ToolCallRequest(
     string Name,
     Dictionary<string, object?> Arguments);
 
-/// <summary>Result from executing a tool.</summary>
-public sealed record ToolCallResult(
-    string CallId,
-    string Name,
-    string Result);
-
 /// <summary>A message in the conversation history.</summary>
 public sealed record ConversationMessage(
     string Role,
