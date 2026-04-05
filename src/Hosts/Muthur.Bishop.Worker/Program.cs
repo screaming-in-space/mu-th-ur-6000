@@ -11,9 +11,6 @@ using Temporalio.Extensions.Hosting;
 
 var builder = Host.CreateApplicationBuilder(args);
 
-builder.Services.Configure<HostOptions>(options =>
-    options.BackgroundServiceExceptionBehavior = BackgroundServiceExceptionBehavior.Ignore);
-
 builder.AddServiceDefaults();
 builder.AddMuthurData("muthur-db", "muthur-cache", runMigrations: false);
 builder.AddMuthurTemporalClient();
