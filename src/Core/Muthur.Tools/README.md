@@ -4,21 +4,19 @@ Agent tools, isolated from the Temporal Worker for independent testability.
 
 ## Architecture
 
-Each tool has three layers:
+Each tool has two layers:
 
 ```
 Domain Logic          → Pdf/PdfExtractor.cs, Documents/DocumentStore.cs
-Handler Bridge        → Handlers/PdfHandler.cs, Handlers/DocumentStoreHandler.cs
+Handler + AIFunction  → Handlers/PdfHandler.cs, Handlers/DocumentStoreHandler.cs
 Registry + Dispatch   → ToolRegistry.cs
 ```
 
 **Domain logic** is pure — typed inputs, typed outputs, no JSON, no tool plumbing. Directly unit-testable.
 
-**Handler bridges** own two code paths:
-- **JSON bridge** (`StoreAsync(string, ToolExecutionContext)`) — deserializes args, calls domain, serializes result as `ToolResult`. Used by Temporal activity dispatch.
-- **LLM definition** (private method with `[Description]` attributes) — calls domain directly with typed parameters. Used by `AIFunctionFactory.Create` for LLM tool schema generation.
+**Handlers** expose a single typed method with `[Description]` attributes. This method serves as both the LLM schema (via `AIFunctionFactory.Create`) and the runtime execution path (via `AIFunction.InvokeAsync`). One code path, not two.
 
-**ToolRegistry** auto-collects all `IToolHandler` implementations via DI, dispatches by name with distributed tracing (`MuthurTrace` spans), and records `ToolExecutions` metrics.
+**ToolRegistry** auto-collects all `IToolHandler` implementations via DI, dispatches by name through `AIFunction.InvokeAsync` with distributed tracing (`MuthurTrace` spans), and records `ToolExecutions` metrics.
 
 ## Tools
 
@@ -31,9 +29,8 @@ Registry + Dispatch   → ToolRegistry.cs
 
 1. Create domain logic in a new folder (e.g., `Search/SearchEngine.cs`) — typed in, typed out
 2. Create handler in `Handlers/` implementing `IToolHandler`:
-   - `Register()` — wire handler + `AIFunctionFactory.Create(TypedMethod, ToolName)`
-   - JSON bridge method — deserialize, call domain, return `ToolResult.From(result)`
-   - Private typed method with `[Description]` attributes — call domain directly
+   - Public typed method with `[Description]` attributes — calls domain directly
+   - `Register()` — returns `ToolRegistration(name, AIFunctionFactory.Create(TypedMethod, name))`
 3. Add tool name constant to `AgentConstants`
 4. Register in `ToolsExtensions.AddMuthurTools()`:
    ```csharp
@@ -49,15 +46,15 @@ ToolRegistry, ToolActivities, and AgentWorkflow don't change.
 | Type | Purpose |
 |------|---------|
 | `IToolHandler` | Contract — handlers implement this, registry auto-collects via DI |
-| `ToolExecutionContext` | Carries correlation metadata (tool name, agent ID, call ID, cancellation token) |
+| `ToolRegistration` | Pairs a tool name with its `AIFunction` |
 | `ToolResult` | Typed result — both serialized JSON (Temporal boundary) and typed payload (in-process) |
-| `ToolRegistry` | Auto-collects handlers, dispatches with tracing and metrics |
+| `ToolRegistry` | Auto-collects handlers, dispatches via `AIFunction.InvokeAsync` with tracing and metrics |
 
 ## Dependencies
 
 - `Muthur.Contracts` — shared types (`ExtractPdfArgs`, `StoreDocumentArgs`, `StoreDocumentResult`, `SerializerDefaults`)
 - `Muthur.Data` — `IDocumentRepository` for document storage
 - `Muthur.Telemetry` — `MuthurTrace` spans, `MuthurMetrics` counters
-- `Microsoft.Extensions.AI` — `AIFunctionFactory`, `AITool`
+- `Microsoft.Extensions.AI` — `AIFunctionFactory`, `AIFunction`, `AITool`
 - `CommunityToolkit.HighPerformance` — `ArrayPoolBufferWriter` for PDF extraction
 - `PdfPig` — PDF text extraction

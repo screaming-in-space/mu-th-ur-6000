@@ -1,10 +1,9 @@
-using System.Text.Json;
 using Microsoft.Extensions.Logging;
 using Muthur.Bishop.Worker.Activities;
 using Muthur.Contracts;
 using Muthur.Telemetry;
 using Muthur.Tools.Documents;
-using Muthur.Tools.Pdf;
+using System.Text.Json;
 using Temporalio.Workflows;
 
 namespace Muthur.Bishop.Worker.Workflows;
@@ -124,7 +123,7 @@ public class AgentWorkflow
 
                 // Cache extraction results; send only a summary to the LLM.
                 var llmResult = toolResult;
-                if (toolCall.Name == AgentConstants.ToolExtractPdf)
+                if (toolCall.Name == AgentConstants.ToolPdfExtractText)
                 {
                     llmResult = CacheExtraction(toolResult, toolCall.Arguments, extractions);
                 }
@@ -157,15 +156,15 @@ public class AgentWorkflow
     /// The LLM needs metadata to decide next steps — not 126K chars of document text.
     /// </summary>
     private static string CacheExtraction(
-        string toolResult, string toolArguments, Dictionary<string, PdfExtractionResult> extractions)
+        string toolResult, Dictionary<string, object?> toolArguments, Dictionary<string, PdfExtractionResult> extractions)
     {
         try
         {
             var extraction = JsonSerializer.Deserialize<PdfExtractionResult>(toolResult, SerializerDefaults.CaseInsensitive);
-            var args = JsonSerializer.Deserialize<ExtractPdfJob>(toolArguments, SerializerDefaults.CaseInsensitive);
-            if (extraction is null || args?.FilePath is null) return toolResult;
+            var filePath = toolArguments.GetValueOrDefault("filePath")?.ToString();
+            if (extraction is null || filePath is null) return toolResult;
 
-            extractions[args.FilePath] = extraction;
+            extractions[filePath] = extraction;
 
             return JsonSerializer.Serialize(new
             {
@@ -173,7 +172,7 @@ public class AgentWorkflow
                 extraction.PageCount,
                 extraction.Metadata,
                 TextLength = extraction.Text.Length,
-                SourcePath = args.FilePath,
+                SourcePath = filePath,
                 Message = "Text extracted successfully. Call store_document to persist."
             });
         }
@@ -188,33 +187,43 @@ public class AgentWorkflow
     /// Enriches store_document arguments with the cached extraction text.
     /// The LLM sends metadata only; the workflow injects the full content.
     /// </summary>
-    private static string EnrichStoreArguments(
-        string arguments, Dictionary<string, PdfExtractionResult> extractions)
+    private static Dictionary<string, object?> EnrichStoreArguments(
+        Dictionary<string, object?> arguments, Dictionary<string, PdfExtractionResult> extractions)
     {
         try
         {
-            var args = JsonSerializer.Deserialize<StoreDocumentJob>(arguments, SerializerDefaults.CaseInsensitive);
-            if (args?.SourcePath is null) return arguments;
+            var sourcePath = arguments.GetValueOrDefault("sourcePath")?.ToString();
+            if (sourcePath is null) return arguments;
 
             // If the LLM already provided text (shouldn't, but defensive), pass through.
-            if (!string.IsNullOrEmpty(args.Text)) return arguments;
+            var existingText = arguments.GetValueOrDefault("text")?.ToString();
+            if (!string.IsNullOrEmpty(existingText)) return arguments;
 
-            if (!extractions.TryGetValue(args.SourcePath, out var extraction)) return arguments;
+            if (!extractions.TryGetValue(sourcePath, out var extraction)) return arguments;
 
-            // Inject cached text and metadata from extraction.
-            var title = args.Title ?? extraction.Metadata.GetValueOrDefault("title");
-            var pageCount = args.PageCount > 0 ? args.PageCount : extraction.PageCount;
-
-            return JsonSerializer.Serialize(new
+            // Build enriched arguments with cached text and metadata.
+            var enriched = new Dictionary<string, object?>(arguments)
             {
-                Title = title,
-                args.SourcePath,
-                Text = extraction.Text,
-                PageCount = pageCount,
-                Metadata = args.Metadata ?? extraction.Metadata
-            });
+                ["text"] = extraction.Text,
+                ["metadata"] = extraction.Metadata
+            };
+
+            // Fill in defaults from extraction if not provided by LLM.
+            if (!enriched.TryGetValue("pageCount", out object? value) || value is null or 0)
+            {
+                value = extraction.PageCount;
+                enriched["pageCount"] = value;
+            }
+
+            var title = arguments.GetValueOrDefault("title")?.ToString();
+            if (string.IsNullOrEmpty(title))
+            {
+                enriched["title"] = extraction.Metadata.GetValueOrDefault("title");
+            }
+
+            return enriched;
         }
-        catch (JsonException ex)
+        catch (Exception ex)
         {
             Workflow.Logger.LogWarning(ex, "Failed to enrich store_document arguments — passing raw arguments");
             return arguments;
@@ -234,23 +243,48 @@ public class AgentWorkflow
     /// Starts DocumentIngestionWorkflow as a fire-and-forget child workflow.
     /// ParentClosePolicy.Abandon ensures ingestion survives ContinueAsNew.
     /// </summary>
-    private static async Task TryStartIngestionAsync(string agentId, string toolArguments, string toolResult)
+    private static async Task TryStartIngestionAsync(
+        string agentId, Dictionary<string, object?> toolArguments, string toolResult)
     {
         StoreDocumentResult? parsedResult = null;
 
         try
         {
-            var args = JsonSerializer.Deserialize<StoreDocumentJob>(toolArguments, SerializerDefaults.CaseInsensitive);
+            var sourcePath = toolArguments.GetValueOrDefault("sourcePath")?.ToString() ?? "";
+            var text = toolArguments.GetValueOrDefault("text")?.ToString() ?? "";
+            var pageCount = toolArguments.GetValueOrDefault("pageCount") switch
+            {
+                int i => i,
+                long l => (int)l,
+                JsonElement je when je.TryGetInt32(out var v) => v,
+                _ => 0
+            };
+
+            // Parse metadata dictionary from arguments.
+            var metadata = new Dictionary<string, string>();
+            if (toolArguments.GetValueOrDefault("metadata") is Dictionary<string, string> m)
+            {
+                metadata = m;
+            }
+            else if (toolArguments.GetValueOrDefault("metadata") is JsonElement metaElement
+                     && metaElement.ValueKind == JsonValueKind.Object)
+            {
+                foreach (var prop in metaElement.EnumerateObject())
+                {
+                    metadata[prop.Name] = prop.Value.GetString() ?? "";
+                }
+            }
+
             parsedResult = JsonSerializer.Deserialize<StoreDocumentResult>(toolResult, SerializerDefaults.CaseInsensitive);
-            if (args is null || parsedResult?.DocumentId is null) return;
+            if (parsedResult?.DocumentId is null) return;
 
             var input = new DocumentIngestionInput(
                 agentId,
                 parsedResult.DocumentId.Value,
-                args.SourcePath ?? "",
-                args.Text ?? "",
-                args.PageCount,
-                args.Metadata ?? []);
+                sourcePath,
+                text,
+                pageCount,
+                metadata);
 
             // Fire-and-forget: StartChildWorkflowAsync returns after the child is scheduled,
             // not after it completes. The agent conversation continues immediately.

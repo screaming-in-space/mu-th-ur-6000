@@ -12,7 +12,7 @@ public static class AgentConstants
     public const int MaxTurnsBeforeContinueAsNew = 50;
 
     // Tool names — single source of truth for ToolRegistry and AgentWorkflow.
-    public const string ToolExtractPdf = "extract_pdf_text";
+    public const string ToolPdfExtractText = "pdf_extract_text";
     public const string ToolStoreDocument = "store_document";
 
     public static string WorkflowId(string agentId) => $"agent-{agentId}";

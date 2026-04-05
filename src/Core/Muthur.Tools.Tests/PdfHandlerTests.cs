@@ -1,45 +1,32 @@
-using System.Text.Json;
+using Muthur.Contracts;
 using Muthur.Tools.Handlers;
 
 namespace Muthur.Tools.Tests;
 
 public class PdfHandlerTests
 {
-    [Fact]
-    public async Task ExtractTextAsync_FileNotFound_Throws()
-    {
-        var args = JsonSerializer.Serialize(new { FilePath = "/nonexistent/path.pdf" });
-        var pdfHandler = new PdfHandler();
+    private readonly PdfHandler _handler = new();
 
+    [Fact]
+    public async Task ExtractPdfTextAsync_FileNotFound_Throws()
+    {
         await Assert.ThrowsAsync<FileNotFoundException>(
-            () => pdfHandler.ExtractTextAsync(args, new ToolExecutionContext("test")));
+            () => _handler.ExtractPdfTextAsync("/nonexistent/path.pdf", CancellationToken.None));
     }
 
     [Fact]
-    public async Task ExtractTextAsync_NullFilePath_ThrowsArgument()
+    public async Task ExtractPdfTextAsync_EmptyFilePath_ThrowsArgument()
     {
-        var args = JsonSerializer.Serialize(new { FilePath = (string?)null });
-        var pdfHandler = new PdfHandler();
-
         await Assert.ThrowsAsync<ArgumentException>(
-            () => pdfHandler.ExtractTextAsync(args, new ToolExecutionContext("test")));
+            () => _handler.ExtractPdfTextAsync("", CancellationToken.None));
     }
 
     [Fact]
-    public async Task ExtractTextAsync_InvalidJson_ThrowsJsonException()
+    public void Register_ReturnsValidRegistration()
     {
-        var pdfHandler = new PdfHandler();
-        await Assert.ThrowsAsync<System.Text.Json.JsonException>(
-            () => pdfHandler.ExtractTextAsync("not json", new ToolExecutionContext("test")));
-    }
+        var registration = _handler.Register();
 
-    [Fact]
-    public async Task ExtractTextAsync_EmptyFilePath_ThrowsArgument()
-    {
-        var args = JsonSerializer.Serialize(new { FilePath = "" });
-        var pdfHandler = new PdfHandler();
-
-        await Assert.ThrowsAsync<ArgumentException>(
-            () => pdfHandler.ExtractTextAsync(args, new ToolExecutionContext("test")));
+        Assert.Equal(AgentConstants.ToolPdfExtractText, registration.Name);
+        Assert.NotNull(registration.Function);
     }
 }

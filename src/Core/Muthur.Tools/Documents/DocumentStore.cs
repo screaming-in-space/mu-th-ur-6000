@@ -15,22 +15,22 @@ public sealed class DocumentStore(
     /// Validates and stores a document, returning its assigned ID.
     /// </summary>
     public async Task<Guid> StoreAsync(
-        StoreDocumentJob args,
+        StoreDocumentJob job,
         CancellationToken cancellationToken = default)
     {
-        if (string.IsNullOrWhiteSpace(args.SourcePath))
+        if (string.IsNullOrWhiteSpace(job.SourcePath))
         {
             throw new ArgumentException("SourcePath is required for document storage");
         }
 
-        logger.LogInformation("Storing document — {Title}, {SourcePath}", args.Title, args.SourcePath);
+        logger.LogInformation("Storing document — {Title}, {SourcePath}", job.Title, job.SourcePath);
 
         var id = await repository.StoreDocumentAsync(
-            args.Title,
-            args.SourcePath,
-            args.Text ?? "",
-            args.PageCount,
-            args.Metadata ?? [],
+            job.Title,
+            job.SourcePath,
+            job.Text ?? "",
+            job.PageCount,
+            job.Metadata ?? [],
             cancellationToken).ConfigureAwait(false);
 
         logger.LogInformation("Document stored — {DocumentId}", id);

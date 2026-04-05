@@ -40,10 +40,10 @@ When a bug is found, check whether the fix is in one place or scattered. If scat
 - Give child workflows deterministic IDs (`ingest-{documentId}`) for idempotency.
 - Use activity chaining to keep work running on a warm worker — avoids repeated scheduling overhead for sequential steps.
 - Use long-running activities for work that must execute continuously (e.g., batch processing). The scheduling overhead (~50ms) is at the dispatch boundary, not inside the activity — once running, execution is at language speed.
+- Do use `FunctionInvokingChatClient` inside a Temporal activity. However, be mindful it collapses all tool calls into one activity and you lose per-tool durability checkpoints. If that is required, introduce suggestions and workarounds involving IChatClient middelware.
 
 ### Don't
 
-- Don't use `FunctionInvokingChatClient` inside a Temporal activity. It collapses all tool calls into one activity and you lose per-tool durability checkpoints.
 - Don't hold `IChatClient` state across activity boundaries. Activities are stateless.
 - Don't use `Thread.Sleep` or `Task.Delay` in workflow code. Use `Workflow.DelayAsync`.
 - Don't call non-deterministic code (DateTime.Now, Guid.NewGuid, HTTP) directly in workflows. Wrap in activities.
@@ -93,7 +93,7 @@ When a bug is found, check whether the fix is in one place or scattered. If scat
 
 ### Don't
 
-- Don't use the package name `UglyToad.PdfPig` on NuGet - the actual package ID is `PdfPig`. The namespace is `UglyToad.PdfPig`.
+- Nuget package ID is `PdfPig`. The namespace is `UglyToad.PdfPig`.
 - Don't hold `PdfDocument` open longer than needed - wrap in `using`.
 - Don't assume all PDFs have extractable text. Scanned documents return empty pages.
 
@@ -155,15 +155,17 @@ When a bug is found, check whether the fix is in one place or scattered. If scat
 ### Do
 
 - Keep tools in the `Muthur.Tools` project, isolated from the Worker.
-- Each tool handler is a class in `Handlers/` with a single async method.
-- Register tools in `ToolRegistry` constructor - `AIFunctionFactory.Create()` for LLM schema + `_handlers` dict for dispatch.
+- Each tool handler is a class in `Handlers/` with a single public typed method and `[Description]` attributes. The typed method IS both the LLM schema and the runtime execution path via `AIFunction.InvokeAsync`.
+- `Register()` returns `ToolRegistration(name, AIFunctionFactory.Create(TypedMethod, name))` — one code path, not two.
 - Tools that need DI (e.g., `DocumentStoreHandler` needs `IDocumentRepository`) take dependencies via constructor injection.
 - Static handlers (e.g., `PdfHandler`) don't need DI - call directly.
+- Tool arguments flow as `Dictionary<string, object?>` from LLM response through Temporal to `AIFunction.InvokeAsync`. No JSON string roundtrips in the dispatch path.
 
 ### Don't
 
 - Don't put tool handlers in the Worker project. The Worker owns Temporal activities; Tools owns handlers.
 - Don't change `AgentWorkflow` or `ToolActivities` when adding a new tool. Only touch `ToolRegistry`.
+- Don't create separate JSON bridge methods in handlers. The `AIFunction` created from the typed method handles parameter binding.
 
 ## Debugging
 

@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Muthur.Contracts;
 using Muthur.Data;
@@ -31,36 +32,34 @@ public class ToolRegistryTests
     }
 
     [Fact]
-    public void GetHandler_KnownTool_ReturnsHandler()
+    public void GetFunction_KnownTool_ReturnsFunction()
     {
-        var handler = _sut.GetHandler(AgentConstants.ToolExtractPdf);
+        var function = _sut.GetFunction(AgentConstants.ToolPdfExtractText);
 
-        Assert.NotNull(handler);
+        Assert.NotNull(function);
     }
 
     [Fact]
-    public void GetHandler_UnknownTool_ReturnsNull()
+    public void GetFunction_UnknownTool_ReturnsNull()
     {
-        var handler = _sut.GetHandler("nonexistent_tool");
+        var function = _sut.GetFunction("nonexistent_tool");
 
-        Assert.Null(handler);
+        Assert.Null(function);
     }
 
     [Theory]
-    [InlineData(AgentConstants.ToolExtractPdf)]
+    [InlineData(AgentConstants.ToolPdfExtractText)]
     [InlineData(AgentConstants.ToolStoreDocument)]
-    public void GetHandler_AllRegisteredTools_HaveHandlers(string toolName)
+    public void GetFunction_AllRegisteredTools_HaveFunctions(string toolName)
     {
-        Assert.NotNull(_sut.GetHandler(toolName));
+        Assert.NotNull(_sut.GetFunction(toolName));
     }
 
     [Fact]
     public async Task ExecuteAsync_UnknownTool_Throws()
     {
-        var context = new ToolExecutionContext("nonexistent_tool");
-
         await Assert.ThrowsAsync<InvalidOperationException>(
-            () => _sut.ExecuteAsync("nonexistent_tool", "{}", context));
+            () => _sut.ExecuteAsync("nonexistent_tool", new Dictionary<string, object?>(), CancellationToken.None));
     }
 
     [Fact]
@@ -78,16 +77,15 @@ public class ToolRegistryTests
         IToolHandler[] handlers = [handler];
         var registry = new ToolRegistry(NullLogger<ToolRegistry>.Instance, handlers);
 
-        var args = System.Text.Json.JsonSerializer.Serialize(new
+        var args = new Dictionary<string, object?>
         {
-            Title = "Test",
-            SourcePath = "/file.pdf",
-            Text = "content",
-            PageCount = 1
-        });
+            ["title"] = "Test",
+            ["sourcePath"] = "/file.pdf",
+            ["text"] = "content",
+            ["pageCount"] = 1
+        };
 
-        var context = new ToolExecutionContext(AgentConstants.ToolStoreDocument);
-        var result = await registry.ExecuteAsync(AgentConstants.ToolStoreDocument, args, context);
+        var result = await registry.ExecuteAsync(AgentConstants.ToolStoreDocument, args, CancellationToken.None);
 
         Assert.NotNull(result);
         Assert.NotEmpty(result.Json);

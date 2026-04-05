@@ -58,8 +58,7 @@ public class LlmActivities(ILogger<LlmActivities> logger, IChatClient chatClient
 
                 foreach (var tc in msg.ToolCalls)
                 {
-                    var args = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, object?>>(tc.Arguments);
-                    assistantMsg.Contents.Add(new FunctionCallContent(tc.Id, tc.Name, args));
+                    assistantMsg.Contents.Add(new FunctionCallContent(tc.Id, tc.Name, tc.Arguments));
                 }
 
                 chatMessages.Add(assistantMsg);
@@ -92,10 +91,11 @@ public class LlmActivities(ILogger<LlmActivities> logger, IChatClient chatClient
                     throw new InvalidOperationException($"LLM returned tool call '{fc.Name}' without a CallId — cannot track tool result");
                 }
 
-                return new ToolCallRequest(
-                    fc.CallId,
-                    fc.Name,
-                    System.Text.Json.JsonSerializer.Serialize(fc.Arguments));
+                var args = fc.Arguments is Dictionary<string, object?> dict
+                    ? dict
+                    : new Dictionary<string, object?>(fc.Arguments ?? new Dictionary<string, object?>());
+
+                return new ToolCallRequest(fc.CallId, fc.Name, args);
             })
             .ToArray();
 

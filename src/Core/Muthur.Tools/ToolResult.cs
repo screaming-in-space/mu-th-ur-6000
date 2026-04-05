@@ -3,7 +3,7 @@ using System.Text.Json;
 namespace Muthur.Tools;
 
 /// <summary>
-/// Typed result from a tool handler. Carries both the serialized JSON string
+/// Typed result from a tool execution. Carries both the serialized JSON string
 /// (for Temporal activity boundaries) and the typed payload (for in-process consumers
 /// that need to inspect the result without redundant deserialization).
 /// </summary>
@@ -17,7 +17,7 @@ public sealed class ToolResult
     /// </summary>
     public object? TypedPayload { get; }
 
-    private ToolResult(string json, object? typedPayload)
+    internal ToolResult(string json, object? typedPayload)
     {
         Json = json;
         TypedPayload = typedPayload;

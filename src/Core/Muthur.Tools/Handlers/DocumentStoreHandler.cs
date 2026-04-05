@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Microsoft.Extensions.AI;
 using Muthur.Contracts;
 using Muthur.Tools.Documents;
@@ -7,42 +6,46 @@ using Muthur.Tools.Documents;
 namespace Muthur.Tools.Handlers;
 
 /// <summary>
-/// Tool handler bridge for document storage. Deserializes tool arguments,
-/// delegates to <see cref="DocumentStore"/>, and serializes the result.
+/// Tool handler for document storage. The typed method is both the LLM schema
+/// and the runtime execution path via <see cref="AIFunction.InvokeAsync"/>.
+/// Workflow-injected parameters (text, metadata) are excluded from the LLM schema
+/// but still bound by <see cref="AIFunction"/> when present in the arguments dictionary.
 /// </summary>
 public sealed class DocumentStoreHandler(DocumentStore store) : IToolHandler
 {
-    public AIFunction Register(
-        Dictionary<string, Func<string, ToolExecutionContext, Task<ToolResult>>> handlers)
-    {
-        handlers[AgentConstants.ToolStoreDocument] = StoreAsync;
-        return AIFunctionFactory.Create(StoreDocumentAsync, AgentConstants.ToolStoreDocument);
-    }
+    /// <summary>Names of parameters the workflow injects — hidden from the LLM schema.</summary>
+    private static readonly HashSet<string> WorkflowInjectedParams = ["text", "metadata"];
 
-    /// <summary>JSON bridge for Temporal activity dispatch path.</summary>
-    public async Task<ToolResult> StoreAsync(string arguments, ToolExecutionContext context)
-    {
-        var args = JsonSerializer.Deserialize<StoreDocumentJob>(arguments, SerializerDefaults.CaseInsensitive)
-            ?? throw new ArgumentException("Invalid store_document arguments");
+    public ToolRegistration Register() => new(
+        AgentConstants.ToolStoreDocument,
+        AIFunctionFactory.Create(StoreDocumentAsync, new AIFunctionFactoryOptions
+        {
+            Name = AgentConstants.ToolStoreDocument,
+            ConfigureParameterBinding = param =>
+                param.Name is not null && WorkflowInjectedParams.Contains(param.Name)
+                    ? new() { ExcludeFromSchema = true }
+                    : default
+        }));
 
-        var id = await store.StoreAsync(args, context.CancellationToken).ConfigureAwait(false);
-
-        return ToolResult.From(new StoreDocumentResult(id));
-    }
-
-    /// <summary>LLM tool definition — calls domain logic directly with typed parameters.</summary>
+    /// <summary>
+    /// Store a previously extracted document. The LLM provides title, sourcePath,
+    /// and pageCount. The workflow enriches the arguments dictionary with text and
+    /// metadata from the extraction cache before dispatch.
+    /// </summary>
     [Description("Store a previously extracted document in the knowledge base for future search. " +
                  "Call this after extract_pdf_text to persist the document. " +
                  "The extracted text is injected automatically — only provide metadata. " +
                  "Returns the stored document ID.")]
-    private async Task<StoreDocumentResult> StoreDocumentAsync(
+    public async Task<StoreDocumentResult> StoreDocumentAsync(
         [Description("Document title")] string title,
         [Description("Original file path (same path used in extract_pdf_text)")] string sourcePath,
         [Description("Number of pages in the document")] int pageCount,
-        CancellationToken cancellationToken)
+        string? text = null,
+        Dictionary<string, string>? metadata = null,
+        CancellationToken cancellationToken = default)
     {
-        var args = new StoreDocumentJob(title, sourcePath, null, pageCount);
-        var id = await store.StoreAsync(args, cancellationToken).ConfigureAwait(false);
+        var job = new StoreDocumentJob(title, sourcePath, text, pageCount, metadata);
+        var id = await store.StoreAsync(job, cancellationToken).ConfigureAwait(false);
         return new StoreDocumentResult(id);
     }
 }

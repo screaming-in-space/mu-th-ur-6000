@@ -1,4 +1,5 @@
 using System.Text.Json;
+using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Logging.Abstractions;
 using Muthur.Contracts;
 using Muthur.Data;
@@ -9,7 +10,7 @@ using NSubstitute;
 namespace Muthur.Tools.Tests;
 
 /// <summary>
-/// Tests for <see cref="DocumentStoreHandler"/> — the JSON bridge layer.
+/// Tests for <see cref="DocumentStoreHandler"/> — now invoked through AIFunction.
 /// </summary>
 public class DocumentStoreHandlerTests
 {
@@ -24,7 +25,7 @@ public class DocumentStoreHandlerTests
     }
 
     [Fact]
-    public async Task StoreAsync_ValidArgs_CallsRepositoryAndReturnsId()
+    public async Task StoreDocumentAsync_ValidArgs_CallsRepositoryAndReturnsId()
     {
         var expectedId = Guid.NewGuid();
         _repo.StoreDocumentAsync(
@@ -32,25 +33,45 @@ public class DocumentStoreHandlerTests
             Arg.Any<int>(), Arg.Any<Dictionary<string, string>>(), Arg.Any<CancellationToken>())
             .Returns(expectedId);
 
-        var args = JsonSerializer.Serialize(new
-        {
-            Title = "Test Doc",
-            SourcePath = "/path/to/doc.pdf",
-            Text = "Some content",
-            PageCount = 3
-        });
+        var result = await _sut.StoreDocumentAsync(
+            "Test Doc", "/path/to/doc.pdf", 3, "Some content", null, CancellationToken.None);
 
-        var result = await _sut.StoreAsync(args, new ToolExecutionContext("test"));
-        var parsed = JsonSerializer.Deserialize<StoreDocumentResult>(result.Json, SerializerDefaults.CaseInsensitive);
-
-        Assert.NotNull(parsed);
-        Assert.Equal(expectedId, parsed.DocumentId);
+        Assert.NotNull(result);
+        Assert.Equal(expectedId, result.DocumentId);
     }
 
     [Fact]
-    public async Task StoreAsync_InvalidJson_ThrowsJsonException()
+    public void Register_ReturnsValidRegistration()
     {
-        await Assert.ThrowsAsync<System.Text.Json.JsonException>(
-            () => _sut.StoreAsync("bad json", new ToolExecutionContext("test")));
+        var registration = _sut.Register();
+
+        Assert.Equal(AgentConstants.ToolStoreDocument, registration.Name);
+        Assert.NotNull(registration.Function);
+    }
+
+    [Fact]
+    public async Task StoreDocumentAsync_ViaAIFunction_ReturnsResult()
+    {
+        var expectedId = Guid.NewGuid();
+        _repo.StoreDocumentAsync(
+            Arg.Any<string?>(), Arg.Any<string>(), Arg.Any<string>(),
+            Arg.Any<int>(), Arg.Any<Dictionary<string, string>>(), Arg.Any<CancellationToken>())
+            .Returns(expectedId);
+
+        var registration = _sut.Register();
+        var aiArgs = new AIFunctionArguments
+        {
+            ["title"] = "Test Doc",
+            ["sourcePath"] = "/path/to/doc.pdf",
+            ["pageCount"] = 3,
+            ["text"] = "Some content"
+        };
+
+        var result = await registration.Function.InvokeAsync(aiArgs, CancellationToken.None);
+
+        Assert.NotNull(result);
+        var json = JsonSerializer.Serialize(result);
+        var parsed = JsonSerializer.Deserialize<StoreDocumentResult>(json, SerializerDefaults.CaseInsensitive);
+        Assert.Equal(expectedId, parsed?.DocumentId);
     }
 }

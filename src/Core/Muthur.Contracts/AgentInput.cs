@@ -20,7 +20,7 @@ public sealed record LlmActivityOutput(
 public sealed record ToolCallRequest(
     string Id,
     string Name,
-    string Arguments);
+    Dictionary<string, object?> Arguments);
 
 /// <summary>Result from executing a tool.</summary>
 public sealed record ToolCallResult(
