@@ -24,7 +24,7 @@ public sealed class MuthurFixture : IAsyncLifetime
     public NpgsqlDataSource DataSource => _dataSource;
     public HttpClient ApiHttpClient { get; private set; } = null!;
 
-    public async Task InitializeAsync()
+    public async ValueTask InitializeAsync()
     {
         SqlMapper.AddTypeHandler(new VectorTypeHandler());
 
@@ -48,7 +48,7 @@ public sealed class MuthurFixture : IAsyncLifetime
         _dataSource = dsb.Build();
     }
 
-    public async Task DisposeAsync()
+    public async ValueTask DisposeAsync()
     {
         ApiHttpClient?.Dispose();
         _dataSource?.Dispose();
