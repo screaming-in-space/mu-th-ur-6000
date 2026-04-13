@@ -24,4 +24,18 @@ internal class StartupExtensions
 
         return builder.Build();
     }
+
+    /// <summary>Walks up from <see cref="AppContext.BaseDirectory"/> looking for the sample PDF.</summary>
+    public static string FindSamplePdf()
+    {
+        var dir = new DirectoryInfo(AppContext.BaseDirectory);
+        while (dir is not null)
+        {
+            var candidate = Path.Combine(dir.FullName, "samples", "research", "A Memory OS for AI System.pdf");
+            if (File.Exists(candidate)) return candidate;
+            dir = dir.Parent;
+        }
+
+        return Path.Combine(AppContext.BaseDirectory, "samples", "research", "A Memory OS for AI System.pdf");
+    }
 }

@@ -3,12 +3,12 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
   </PropertyGroup>
   <ItemGroup Label="Aspire">
-    <PackageVersion Include="Aspire.Hosting" Version="13.2.1" />
-    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.2.1" />
-    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.2.1" />
-    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.2.1" />
-    <PackageVersion Include="Aspire.Npgsql" Version="13.2.1" />
-    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.2.1" />
+    <PackageVersion Include="Aspire.Hosting" Version="13.2.2" />
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="13.2.2" />
+    <PackageVersion Include="Aspire.Hosting.PostgreSQL" Version="13.2.2" />
+    <PackageVersion Include="Aspire.Hosting.Redis" Version="13.2.2" />
+    <PackageVersion Include="Aspire.Npgsql" Version="13.2.2" />
+    <PackageVersion Include="Aspire.StackExchange.Redis.DistributedCaching" Version="13.2.2" />
     <PackageVersion Include="CommunityToolkit.HighPerformance" Version="8.4.2" />
   </ItemGroup>
   <ItemGroup Label="Data">
@@ -29,8 +29,8 @@
     <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="10.4.0" />
   </ItemGroup>
   <ItemGroup Label="OpenTelemetry">
-    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.1" />
-    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.15.2" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.15.2" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.15.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.15.0" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.15.0" />
@@ -46,15 +46,15 @@
     <PackageVersion Include="PdfPig" Version="0.1.15-alpha-20260328-e5c04" />
   </ItemGroup>
   <ItemGroup Label="Temporal">
-    <PackageVersion Include="Temporalio.Extensions.Hosting" Version="1.12.0" />
+    <PackageVersion Include="Temporalio.Extensions.Hosting" Version="1.13.0" />
   </ItemGroup>
   <ItemGroup Label="Benchmarking">
-    <PackageVersion Include="BenchmarkDotNet" Version="0.14.0" />
+    <PackageVersion Include="BenchmarkDotNet" Version="0.15.8" />
   </ItemGroup>
   <ItemGroup Label="Testing">
-    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.2.1" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="13.2.2" />
     <PackageVersion Include="coverlet.collector" Version="8.0.1" />
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.4.0" />
     <PackageVersion Include="NSubstitute" Version="5.3.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
